@@ -3,6 +3,12 @@ target/
 
 # Local secrets (MongoDB URI, etc.)
 src/main/resources/application-local.properties
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
