@@ -1,0 +1,7 @@
+# 1) Copy this file to: src/main/resources/application-local.properties (that path is gitignored)
+# 2) Paste your Atlas URI on the line below, or use the MONGODB_URI environment variable instead of this file.
+#
+# Example (replace USER, PASSWORD, host, DATABASE):
+# spring.data.mongodb.uri=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/DATABASE?retryWrites=true&w=majority
+
+spring.data.mongodb.uri=

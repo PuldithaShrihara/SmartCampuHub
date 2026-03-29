@@ -1,0 +1,77 @@
+.app-header {
+  height: 60px;
+  background: #1a237e;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #fff;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-icon-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  position: relative;
+}
+
+.header-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #e53935;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
+  padding: 1px 5px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-user span {
+  font-size: 14px;
+}
+
+.header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.header-logout {
+  border: none;
+  background: transparent;
+  color: #ffb4b4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
