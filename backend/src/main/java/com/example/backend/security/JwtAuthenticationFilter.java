@@ -11,8 +11,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.backend.auth.JwtService;
-import com.example.backend.user.Role;
+import com.example.backend.user.entity.Role;
 
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;

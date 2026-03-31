@@ -9,19 +9,19 @@ import {
   FaUsers,
   FaBuilding,
 } from 'react-icons/fa'
-import Sidebar from '../../components/Sidebar.jsx'
-import Header from '../../components/Header.jsx'
+import Sidebar from '../../components/common/Sidebar.jsx'
+import Header from '../../components/common/Header.jsx'
 import { useAuth } from '../../context/useAuth.js'
-import { logout as clearSession } from '../../api/auth.js'
-import AdminHome from '../AdminPages/AdminHome.jsx'
-import PendingBookings from '../AdminPages/PendingBookings.jsx'
-import AllBookings from '../AdminPages/AllBookings.jsx'
-import Resources from '../AdminPages/Resources.jsx'
-import Tickets from '../AdminPages/Tickets.jsx'
-import Users from '../AdminPages/Users.jsx'
-import Statistics from '../AdminPages/Statistics.jsx'
-import Settings from '../AdminPages/Settings.jsx'
-import '../StudentDashboard.css'
+import { logout as clearSession } from '../../api/authApi.js'
+import AdminHome from './AdminHome.jsx'
+import PendingBookingsPage from './PendingBookingsPage.jsx'
+import AllBookingsPage from './AllBookingsPage.jsx'
+import ResourcesPage from './ResourcesPage.jsx'
+import TicketsPage from './TicketsPage.jsx'
+import UsersPage from './UsersPage.jsx'
+import StatisticsPage from './StatisticsPage.jsx'
+import SettingsPage from './SettingsPage.jsx'
+import '../../styles/StudentDashboard.css'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -67,13 +67,13 @@ export default function AdminDashboard() {
         <div className="dashboard-content">
           <Routes>
             <Route path="/" element={<AdminHome />} />
-            <Route path="/pending-bookings" element={<PendingBookings />} />
-            <Route path="/all-bookings" element={<AllBookings />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/tickets" element={<Tickets />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/statistics" element={<Statistics />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/pending-bookings" element={<PendingBookingsPage />} />
+            <Route path="/all-bookings" element={<AllBookingsPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/tickets" element={<TicketsPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/statistics" element={<StatisticsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </div>
