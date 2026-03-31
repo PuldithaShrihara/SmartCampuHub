@@ -6,8 +6,8 @@ import {
   superadminCreateAdmin,
   superadminCreateTechnician,
   superadminListUsers,
-} from '../../api/auth.js'
-import '../DashboardLayout.css'
+} from '../../api/authApi.js'
+import '../../styles/DashboardLayout.css'
 
 const emptyStaff = { fullName: '', email: '', password: '' }
 
