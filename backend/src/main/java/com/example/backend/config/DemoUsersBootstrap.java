@@ -54,6 +54,9 @@ public class DemoUsersBootstrap implements ApplicationRunner {
 		user.setFullName(fullName);
 		user.setRole(role);
 		user.setCreatedAt(Instant.now());
+		user.setVerified(true);
+		user.setVerificationOtp(null);
+		user.setVerificationOtpExpiresAt(null);
 		userRepository.save(user);
 		log.info("Seeded demo {} user: {}", role, key);
 	}

@@ -1,4 +1,4 @@
-import { apiGetAuth, apiPost, apiPostAuth } from './client.js'
+import { apiDeleteAuth, apiGetAuth, apiPost, apiPostAuth } from './client.js'
 
 export {
   saveSession,
@@ -11,6 +11,26 @@ export {
 /** --- Public auth --- */
 export async function studentRegister(body) {
   return apiPost('/api/auth/student/register', body)
+}
+
+export async function studentVerifyOtp(body) {
+  return apiPost('/api/auth/verify-otp', body)
+}
+
+export async function studentResendVerification(body) {
+  return apiPost('/api/auth/student/resend-verification', body)
+}
+
+export async function forgotPasswordSendOtp(body) {
+  return apiPost('/api/auth/forgot-password/send-otp', body)
+}
+
+export async function forgotPasswordVerifyOtp(body) {
+  return apiPost('/api/auth/forgot-password/verify-otp', body)
+}
+
+export async function forgotPasswordReset(body) {
+  return apiPost('/api/auth/forgot-password/reset', body)
 }
 
 export async function studentLogin(body) {
@@ -45,4 +65,17 @@ export async function adminListTechnicians() {
 
 export async function adminCreateTechnician(body) {
   return apiPostAuth('/api/admin/users/technician', body)
+}
+
+/** --- Admin role management (STUDENT + TECHNICIAN) --- */
+export async function adminListUsers() {
+  return apiGetAuth('/api/admin/users')
+}
+
+export async function adminCreateUser(body) {
+  return apiPostAuth('/api/admin/users', body)
+}
+
+export async function adminHardDeleteUser(userId) {
+  return apiDeleteAuth(`/api/admin/users/${userId}/hard`)
 }

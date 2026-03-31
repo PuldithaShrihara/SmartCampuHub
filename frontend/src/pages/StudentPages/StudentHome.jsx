@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth.js'
+import { listNotifications } from '../../api/notifications.js'
 import '../DashboardLayout.css'
 
 const mockData = {
@@ -51,6 +53,23 @@ function StatCard({ label, value }) {
 export default function StudentHome() {
   const { user } = useAuth()
   const now = new Date().toLocaleString()
+  const [latestNotifications, setLatestNotifications] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await listNotifications()
+        if (!cancelled) setLatestNotifications(Array.isArray(res) ? res.slice(0, 3) : [])
+      } catch {
+        if (!cancelled) setLatestNotifications([])
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div>
@@ -125,7 +144,7 @@ export default function StudentHome() {
       <div className="dash-card">
         <h2>Latest Notifications</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
-          {mockData.notifications.slice(0, 3).map((n) => (
+          {latestNotifications.map((n) => (
             <li key={n.id} style={{ marginBottom: 8, color: '#616161' }}>
               {n.message}
             </li>

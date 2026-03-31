@@ -5,3 +5,15 @@
 # spring.data.mongodb.uri=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/DATABASE?retryWrites=true&w=majority
 
 spring.data.mongodb.uri=
+
+# --- Optional: student email verification (Gmail) ---
+# app.email.enabled=true
+# spring.mail.username=you@gmail.com
+# spring.mail.password=your-app-password
+# app.email.from=you@gmail.com
+# app.email.sender-name=Smart Campus Hub
+# app.base.url=https://your-ngrok-backend-url.ngrok-free.app
+# app.frontend.url=https://your-frontend-url.example.com
+# Optional local debug (do not enable in production):
+# app.email.log-verification-otp=true
+# IMPORTANT: use app.base.url (not app.email.verification.base-url). Older key is no longer used.

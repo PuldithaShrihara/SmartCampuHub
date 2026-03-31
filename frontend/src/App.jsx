@@ -6,22 +6,35 @@ import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import StudentSignupPage from './pages/student/StudentSignupPage.jsx'
 import StudentLoginPage from './pages/student/StudentLoginPage.jsx'
+import StudentVerifyOtpPage from './pages/student/StudentVerifyOtpPage.jsx'
+import ForgotPasswordPage from './pages/student/ForgotPasswordPage.jsx'
+import ForgotPasswordVerifyOtpPage from './pages/student/ForgotPasswordVerifyOtpPage.jsx'
+import ResetPasswordPage from './pages/student/ResetPasswordPage.jsx'
 import StudentDashboard from './pages/student/StudentDashboard.jsx'
 import SuperadminLoginPage from './pages/superadmin/SuperadminLoginPage.jsx'
 import SuperadminDashboard from './pages/superadmin/SuperadminDashboard.jsx'
 import StaffLoginPage from './pages/staff/StaffLoginPage.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import TechnicianDashboard from './pages/technician/TechnicianDashboard.jsx'
+import { ToastProvider } from './components/ToastProvider.jsx'
 import './App.css'
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+      <ToastProvider>
+        <AuthProvider>
+          <Routes>
           <Route path="/" element={<HomePage />} />
 
           <Route path="/student/signup" element={<StudentSignupPage />} />
+          <Route path="/student/verify-otp" element={<StudentVerifyOtpPage />} />
+          <Route path="/student/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            path="/student/forgot-password/verify-otp"
+            element={<ForgotPasswordVerifyOtpPage />}
+          />
+          <Route path="/student/forgot-password/reset" element={<ResetPasswordPage />} />
           <Route path="/student/login" element={<StudentLoginPage />} />
           <Route
             element={
@@ -79,8 +92,9 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   )
 }

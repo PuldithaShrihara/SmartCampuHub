@@ -1,37 +1,43 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { studentRegister } from '../../api/auth.js'
-import { useAuth } from '../../context/useAuth.js'
-import { normalizeCampusEmail } from '../../utils/loginIdentifier.js'
 import '../AuthPage.css'
 
 export default function StudentSignupPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
     if (password !== confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+    const regEmail = email.trim().toLowerCase()
+    if (!regEmail.includes('@')) {
+      setError('Enter your full email address so we can send the OTP.')
       return
     }
     setLoading(true)
     try {
       const data = await studentRegister({
         fullName,
-        email: normalizeCampusEmail(email),
+        email: regEmail,
         password,
         confirmPassword,
       })
-      login(data)
-      navigate('/student', { replace: true })
+      setSuccessMessage(data?.message || 'Account created. Check your email for OTP.')
+      setTimeout(() => {
+        navigate('/student/verify-otp', { state: { email: regEmail }, replace: true })
+      }, 700)
     } catch (err) {
       setError(err.message || 'Registration failed')
     } finally {
@@ -51,6 +57,11 @@ export default function StudentSignupPage() {
 
         <div className="auth-card">
           <h2>Sign up (Student)</h2>
+          {successMessage ? (
+            <div className="auth-error" style={{ background: '#e8f5e9', color: '#2e7d32' }}>
+              {successMessage}
+            </div>
+          ) : null}
           {error ? <div className="auth-error">{error}</div> : null}
           <form onSubmit={handleSubmit}>
             <div className="auth-field">
@@ -66,12 +77,12 @@ export default function StudentSignupPage() {
               />
             </div>
             <div className="auth-field">
-              <label htmlFor="stu-email">Email or username</label>
+              <label htmlFor="stu-email">Email</label>
               <input
                 id="stu-email"
-                type="text"
+                type="email"
                 autoComplete="email"
-                placeholder="e.g. student1 or name@school.edu"
+                placeholder="e.g. your.email@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -102,12 +113,22 @@ export default function StudentSignupPage() {
                 minLength={8}
               />
             </div>
-            <button type="submit" className="auth-submit" disabled={loading}>
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={loading || !!successMessage}
+            >
               {loading ? 'Creating account…' : 'Create student account'}
             </button>
           </form>
           <p className="auth-footer">
             Already registered? <Link to="/student/login">Student login</Link>
+            {successMessage ? (
+              <>
+                {' '}
+                After OTP verification, <Link to="/student/login">sign in here</Link>.
+              </>
+            ) : null}
           </p>
         </div>
 

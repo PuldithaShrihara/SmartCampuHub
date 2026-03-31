@@ -13,6 +13,8 @@ public interface UserRepository extends MongoRepository<User, String> {
 
 	List<User> findByRole(Role role);
 
+	List<User> findByRoleIn(List<Role> roles);
+
 	List<User> findAllByOrderByCreatedAtDesc();
 
 }

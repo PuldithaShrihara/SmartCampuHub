@@ -51,6 +51,9 @@ public class SuperadminBootstrap implements ApplicationRunner {
 		user.setFullName(superadminFullName.trim());
 		user.setRole(Role.SUPERADMIN);
 		user.setCreatedAt(Instant.now());
+		user.setVerified(true);
+		user.setVerificationOtp(null);
+		user.setVerificationOtpExpiresAt(null);
 		userRepository.save(user);
 		log.warn("Seeded SUPERADMIN user: {} (change app.superadmin.password immediately in production)", email);
 	}

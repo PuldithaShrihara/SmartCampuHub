@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   FaCalendar,
   FaChartBar,
@@ -19,13 +20,16 @@ import AllBookings from '../AdminPages/AllBookings.jsx'
 import Resources from '../AdminPages/Resources.jsx'
 import Tickets from '../AdminPages/Tickets.jsx'
 import Users from '../AdminPages/Users.jsx'
+import Notifications from '../AdminPages/Notifications.jsx'
 import Statistics from '../AdminPages/Statistics.jsx'
 import Settings from '../AdminPages/Settings.jsx'
+import { getUnreadNotificationCount } from '../../api/notifications.js'
 import '../StudentDashboard.css'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/admin', end: true },
@@ -48,6 +52,24 @@ export default function AdminDashboard() {
     navigate('/staff/login', { replace: true })
   }
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadUnread() {
+      try {
+        const res = await getUnreadNotificationCount()
+        if (!cancelled) setUnreadNotifications(res?.count || 0)
+      } catch {
+        if (!cancelled) setUnreadNotifications(0)
+      }
+    }
+    loadUnread()
+    window.addEventListener('notifications:changed', loadUnread)
+    return () => {
+      cancelled = true
+      window.removeEventListener('notifications:changed', loadUnread)
+    }
+  }, [])
+
   return (
     <div className="dashboard-container">
       <Sidebar
@@ -60,8 +82,8 @@ export default function AdminDashboard() {
         <Header
           title="Admin Dashboard"
           userName={user?.fullName}
-          unreadNotifications={3}
-          onNotificationClick={() => navigate('/admin/tickets')}
+          unreadNotifications={unreadNotifications}
+          onNotificationClick={() => navigate('/admin/notifications')}
           onLogout={handleLogout}
         />
         <div className="dashboard-content">
@@ -72,6 +94,7 @@ export default function AdminDashboard() {
             <Route path="/resources" element={<Resources />} />
             <Route path="/tickets" element={<Tickets />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/statistics" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />

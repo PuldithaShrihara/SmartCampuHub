@@ -77,6 +77,9 @@ export default function StudentLoginPage() {
             New student? <Link to="/student/signup">Create an account</Link>
           </p>
           <p className="auth-footer" style={{ marginTop: 8 }}>
+            Forgot password? <Link to="/student/forgot-password">Reset with OTP</Link>
+          </p>
+          <p className="auth-footer" style={{ marginTop: 8 }}>
             Staff? <Link to="/staff/login">Staff login</Link>
           </p>
         </div>
