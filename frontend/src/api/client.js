@@ -83,3 +83,40 @@ export async function apiPostAuth(path, body) {
   })
   return parseResponse(res)
 }
+
+/**
+ * @param {string} path
+ * @param {object} body
+ */
+export async function apiPatchAuth(path, body = {}) {
+  const token = getToken()
+  if (!token) {
+    throw new Error('Not signed in')
+  }
+  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  })
+  return parseResponse(res)
+}
+
+/**
+ * @param {string} path
+ */
+export async function apiDeleteAuth(path) {
+  const token = getToken()
+  if (!token) {
+    throw new Error('Not signed in')
+  }
+  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return parseResponse(res)
+}

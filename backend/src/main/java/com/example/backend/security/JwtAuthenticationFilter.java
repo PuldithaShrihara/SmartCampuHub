@@ -37,7 +37,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 
 		String path = request.getRequestURI();
-		if (!path.startsWith("/api/superadmin") && !path.startsWith("/api/admin")) {
+		// Only JWT-protect API endpoints. Auth routes remain public.
+		if (!path.startsWith("/api/") || path.startsWith("/api/auth/")) {
 			filterChain.doFilter(request, response);
 			return;
 		}

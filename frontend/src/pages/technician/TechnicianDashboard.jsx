@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   FaBell,
   FaBuilding,
@@ -11,6 +12,7 @@ import Sidebar from '../../components/common/Sidebar.jsx'
 import Header from '../../components/common/Header.jsx'
 import { useAuth } from '../../context/useAuth.js'
 import { logout as clearSession } from '../../api/authApi.js'
+import { getUnreadNotificationCount } from '../../api/notifications.js'
 import TechnicianHome from './TechnicianHome.jsx'
 import TechnicianTicketsPage from './TechnicianTicketsPage.jsx'
 import TechnicianCalendarPage from './TechnicianCalendarPage.jsx'
@@ -22,6 +24,7 @@ import '../../styles/StudentDashboard.css'
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/technician', end: true },
@@ -54,6 +57,24 @@ export default function TechnicianDashboard() {
     navigate('/staff/login', { replace: true })
   }
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadUnread() {
+      try {
+        const res = await getUnreadNotificationCount()
+        if (!cancelled) setUnreadNotifications(res?.count || 0)
+      } catch {
+        if (!cancelled) setUnreadNotifications(0)
+      }
+    }
+    loadUnread()
+    window.addEventListener('notifications:changed', loadUnread)
+    return () => {
+      cancelled = true
+      window.removeEventListener('notifications:changed', loadUnread)
+    }
+  }, [])
+
   return (
     <div className="dashboard-container">
       <Sidebar
@@ -66,7 +87,7 @@ export default function TechnicianDashboard() {
         <Header
           title="Technician Dashboard"
           userName={user?.fullName}
-          unreadNotifications={4}
+          unreadNotifications={unreadNotifications}
           onNotificationClick={() => navigate('/technician/notifications')}
           onLogout={handleLogout}
         />
