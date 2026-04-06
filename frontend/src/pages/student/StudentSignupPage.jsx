@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { studentRegister } from '../../api/auth.js'
+import { StudentGoogleAuthSection } from './StudentGoogleAuthSection.jsx'
 import '../AuthPage.css'
 
 export default function StudentSignupPage() {
@@ -121,6 +122,13 @@ export default function StudentSignupPage() {
               {loading ? 'Creating account…' : 'Create student account'}
             </button>
           </form>
+          {!successMessage ? (
+            <StudentGoogleAuthSection
+              setError={setError}
+              loading={loading}
+              setLoading={setLoading}
+            />
+          ) : null}
           <p className="auth-footer">
             Already registered? <Link to="/student/login">Student login</Link>
             {successMessage ? (

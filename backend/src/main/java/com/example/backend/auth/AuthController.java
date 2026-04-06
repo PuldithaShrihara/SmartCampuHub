@@ -1,7 +1,12 @@
 package com.example.backend.auth;
 
+import java.util.Collections;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +19,7 @@ import com.example.backend.auth.dto.ForgotPasswordSendOtpRequest;
 import com.example.backend.auth.dto.ForgotPasswordVerifyOtpRequest;
 import com.example.backend.auth.dto.ResendVerificationRequest;
 import com.example.backend.auth.dto.StaffLoginRequest;
+import com.example.backend.auth.dto.StudentGoogleLoginRequest;
 import com.example.backend.auth.dto.StudentLoginRequest;
 import com.example.backend.auth.dto.StudentRegisterRequest;
 import com.example.backend.auth.dto.StudentRegistrationResponse;
@@ -29,8 +35,20 @@ public class AuthController {
 
 	private final AuthService authService;
 
+	@Value("${app.google.oauth.client-id:}")
+	private String googleOAuthClientId;
+
 	public AuthController(AuthService authService) {
 		this.authService = authService;
+	}
+
+	/**
+	 * Public Web client ID for Sign in with Google (same value embedded in the SPA).
+	 */
+	@GetMapping("/public/oauth-config")
+	public Map<String, String> publicOAuthConfig() {
+		String id = googleOAuthClientId == null ? "" : googleOAuthClientId.trim();
+		return Collections.singletonMap("googleClientId", id);
 	}
 
 	@PostMapping("/student/register")
@@ -67,6 +85,11 @@ public class AuthController {
 	@PostMapping("/student/login")
 	public AuthResponse loginStudent(@Valid @RequestBody StudentLoginRequest request) {
 		return authService.loginStudent(request);
+	}
+
+	@PostMapping("/student/google")
+	public AuthResponse loginStudentWithGoogle(@Valid @RequestBody StudentGoogleLoginRequest request) {
+		return authService.loginStudentWithGoogle(request);
 	}
 
 	@PostMapping("/superadmin/login")

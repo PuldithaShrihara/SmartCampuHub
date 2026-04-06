@@ -37,6 +37,10 @@ export async function studentLogin(body) {
   return apiPost('/api/auth/student/login', body)
 }
 
+export async function studentGoogleLogin(body) {
+  return apiPost('/api/auth/student/google', body)
+}
+
 export async function superadminLogin(body) {
   return apiPost('/api/auth/superadmin/login', body)
 }

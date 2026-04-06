@@ -15,6 +15,12 @@ public class User {
 	@Indexed(unique = true)
 	private String email;
 
+	/**
+	 * Google account subject ({@code sub}) when the user signed in with Google; sparse unique index.
+	 */
+	@Indexed(unique = true, sparse = true)
+	private String googleSub;
+
 	private String passwordHash;
 
 	private String fullName;
@@ -60,6 +66,14 @@ public class User {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getGoogleSub() {
+		return googleSub;
+	}
+
+	public void setGoogleSub(String googleSub) {
+		this.googleSub = googleSub;
 	}
 
 	public String getPasswordHash() {

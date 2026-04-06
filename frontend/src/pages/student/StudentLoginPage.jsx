@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { studentLogin } from '../../api/auth.js'
 import { useAuth } from '../../context/useAuth.js'
 import { normalizeCampusEmail } from '../../utils/loginIdentifier.js'
+import { StudentGoogleAuthSection } from './StudentGoogleAuthSection.jsx'
 import '../AuthPage.css'
 
 export default function StudentLoginPage() {
@@ -73,6 +74,11 @@ export default function StudentLoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+          <StudentGoogleAuthSection
+            setError={setError}
+            loading={loading}
+            setLoading={setLoading}
+          />
           <p className="auth-footer">
             New student? <Link to="/student/signup">Create an account</Link>
           </p>

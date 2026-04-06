@@ -3,6 +3,11 @@ package com.example.backend.auth;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,10 +17,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.backend.auth.GoogleOAuthTokenService.GoogleUserPayload;
 import com.example.backend.auth.dto.EmailVerificationResponse;
 import com.example.backend.auth.dto.ForgotPasswordResetRequest;
 import com.example.backend.auth.dto.StaffLoginRequest;
 import com.example.backend.auth.dto.StaffLoginType;
+import com.example.backend.auth.dto.StudentGoogleLoginRequest;
 import com.example.backend.auth.dto.StudentLoginRequest;
 import com.example.backend.auth.dto.StudentRegisterRequest;
 import com.example.backend.auth.dto.StudentRegistrationResponse;
@@ -31,6 +38,8 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+	private static final String DEFAULT_GOOGLE_STUDENT_EMAIL_DOMAIN = "my.sliit.lk";
+
 	private final UserRepository userRepository;
 
 	private final PasswordEncoder passwordEncoder;
@@ -38,6 +47,11 @@ public class AuthService {
 	private final JwtService jwtService;
 
 	private final EmailService emailService;
+
+	private final GoogleOAuthTokenService googleOAuthTokenService;
+
+	@Value("${app.google.oauth.allowed-email-domains:}")
+	private String allowedGoogleEmailDomains;
 
 	@Value("${app.email.verification.otp-valid-minutes:5}")
 	private long verificationOtpValidMinutes;
@@ -49,11 +63,12 @@ public class AuthService {
 	private boolean logVerificationOtp;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
-			EmailService emailService) {
+			EmailService emailService, GoogleOAuthTokenService googleOAuthTokenService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.emailService = emailService;
+		this.googleOAuthTokenService = googleOAuthTokenService;
 	}
 
 	public StudentRegistrationResponse registerStudent(StudentRegisterRequest request) {
@@ -199,6 +214,95 @@ public class AuthService {
 		user.setPasswordResetOtpExpiresAt(null);
 		userRepository.save(user);
 		return new StudentRegistrationResponse("Password reset successful. You can now sign in.", user.getEmail());
+	}
+
+	public AuthResponse loginStudentWithGoogle(StudentGoogleLoginRequest request) {
+		if (!googleOAuthTokenService.isConfigured()) {
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+					"Google sign-in is not configured on this server");
+		}
+		GoogleUserPayload g = googleOAuthTokenService.verifyAndParse(request.idToken());
+		assertGoogleEmailDomainAllowed(g.email());
+
+		User user = userRepository.findByEmail(g.email()).orElse(null);
+		if (user == null) {
+			user = userRepository.findByGoogleSub(g.googleSub()).orElse(null);
+			if (user != null && !g.email().equalsIgnoreCase(user.getEmail())) {
+				user.setEmail(g.email());
+			}
+		}
+		if (user == null) {
+			user = createNewGoogleStudent(g);
+			userRepository.save(user);
+			return tokenFor(user);
+		}
+
+		Role effective = user.getRole() == null ? Role.STUDENT : user.getRole();
+		if (effective != Role.STUDENT) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"This account is not a student account. Use the staff or superadmin login.");
+		}
+		if (user.getRole() == null) {
+			user.setRole(Role.STUDENT);
+		}
+		if (user.getGoogleSub() != null && !user.getGoogleSub().equals(g.googleSub())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"This account is linked to a different Google account.");
+		}
+		if (user.getGoogleSub() == null) {
+			user.setGoogleSub(g.googleSub());
+		}
+		if (Boolean.FALSE.equals(user.getVerified())) {
+			user.setVerified(true);
+		}
+		if (g.fullName() != null && !g.fullName().isBlank()
+				&& (user.getFullName() == null || user.getFullName().isBlank())) {
+			user.setFullName(g.fullName());
+		}
+		userRepository.save(user);
+		return tokenFor(user);
+	}
+
+	private User createNewGoogleStudent(GoogleUserPayload g) {
+		User user = new User();
+		user.setEmail(g.email());
+		user.setGoogleSub(g.googleSub());
+		user.setFullName(g.fullName());
+		user.setRole(Role.STUDENT);
+		user.setVerified(true);
+		user.setCreatedAt(Instant.now());
+		byte[] bytes = new byte[32];
+		SECURE_RANDOM.nextBytes(bytes);
+		user.setPasswordHash(passwordEncoder.encode(Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)));
+		return user;
+	}
+
+	private void assertGoogleEmailDomainAllowed(String email) {
+		String spec = (allowedGoogleEmailDomains == null || allowedGoogleEmailDomains.isBlank())
+				? DEFAULT_GOOGLE_STUDENT_EMAIL_DOMAIN
+				: allowedGoogleEmailDomains.trim();
+		String lower = email.toLowerCase(Locale.ROOT).trim();
+		List<String> allowedDomains = new ArrayList<>();
+		for (String raw : spec.split(",")) {
+			String domain = raw.trim().toLowerCase(Locale.ROOT);
+			if (domain.isEmpty()) {
+				continue;
+			}
+			allowedDomains.add(domain);
+			if (lower.endsWith("@" + domain)) {
+				return;
+			}
+		}
+		if (allowedDomains.isEmpty()) {
+			allowedDomains.add(DEFAULT_GOOGLE_STUDENT_EMAIL_DOMAIN);
+			if (lower.endsWith("@" + DEFAULT_GOOGLE_STUDENT_EMAIL_DOMAIN)) {
+				return;
+			}
+		}
+		String suffixes = allowedDomains.stream().map(d -> "@" + d).collect(Collectors.joining(", "));
+		throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+				"Google sign-in is only allowed for these email domains: " + suffixes
+						+ ". Your Google account must use one of them (personal accounts such as @gmail.com are not accepted).");
 	}
 
 	public AuthResponse loginStudent(StudentLoginRequest request) {
