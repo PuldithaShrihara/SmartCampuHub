@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { forgotPasswordSendOtp } from '../../api/auth.js'
-import '../AuthPage.css'
+import '../../styles/AuthPage.css'
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()

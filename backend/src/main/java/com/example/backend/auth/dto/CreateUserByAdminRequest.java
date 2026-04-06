@@ -1,6 +1,6 @@
 package com.example.backend.auth.dto;
 
-import com.example.backend.user.Role;
+import com.example.backend.user.entity.Role;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

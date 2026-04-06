@@ -8,18 +8,18 @@ import {
   FaHome,
   FaTicketAlt,
 } from 'react-icons/fa'
-import Sidebar from '../../components/Sidebar.jsx'
-import Header from '../../components/Header.jsx'
+import Sidebar from '../../components/common/Sidebar.jsx'
+import Header from '../../components/common/Header.jsx'
 import { useAuth } from '../../context/useAuth.js'
-import { logout as clearSession } from '../../api/auth.js'
+import { logout as clearSession } from '../../api/authApi.js'
 import { getUnreadNotificationCount } from '../../api/notifications.js'
-import TechnicianHome from '../TechnicianPages/TechnicianHome.jsx'
-import Tickets from '../TechnicianPages/Tickets.jsx'
-import Calendar from '../TechnicianPages/Calendar.jsx'
-import Resources from '../TechnicianPages/Resources.jsx'
-import Notifications from '../TechnicianPages/Notifications.jsx'
-import Settings from '../TechnicianPages/Settings.jsx'
-import '../StudentDashboard.css'
+import TechnicianHome from './TechnicianHome.jsx'
+import TechnicianTicketsPage from './TechnicianTicketsPage.jsx'
+import TechnicianCalendarPage from './TechnicianCalendarPage.jsx'
+import TechnicianResourcesPage from './TechnicianResourcesPage.jsx'
+import TechnicianNotificationsPage from './TechnicianNotificationsPage.jsx'
+import TechnicianSettingsPage from './TechnicianSettingsPage.jsx'
+import '../../styles/StudentDashboard.css'
 
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
@@ -28,7 +28,11 @@ export default function TechnicianDashboard() {
 
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/technician', end: true },
-    { label: 'My Tickets', icon: FaTicketAlt, path: '/technician/tickets' },
+    {
+      label: 'My Tickets',
+      icon: FaTicketAlt,
+      path: '/technician/tickets',
+    },
     {
       label: 'Booking Calendar',
       icon: FaCalendar,
@@ -90,11 +94,14 @@ export default function TechnicianDashboard() {
         <div className="dashboard-content">
           <Routes>
             <Route path="/" element={<TechnicianHome />} />
-            <Route path="/tickets" element={<Tickets />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/tickets" element={<TechnicianTicketsPage />} />
+            <Route path="/calendar" element={<TechnicianCalendarPage />} />
+            <Route path="/resources" element={<TechnicianResourcesPage />} />
+            <Route
+              path="/notifications"
+              element={<TechnicianNotificationsPage />}
+            />
+            <Route path="/settings" element={<TechnicianSettingsPage />} />
             <Route path="*" element={<Navigate to="/technician" replace />} />
           </Routes>
         </div>

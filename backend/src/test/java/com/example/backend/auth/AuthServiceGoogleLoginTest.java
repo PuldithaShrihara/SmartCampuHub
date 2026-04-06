@@ -23,11 +23,14 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.auth.GoogleOAuthTokenService.GoogleUserPayload;
+import com.example.backend.auth.dto.AuthResponse;
 import com.example.backend.auth.dto.StudentGoogleLoginRequest;
+import com.example.backend.auth.service.AuthService;
 import com.example.backend.mail.EmailService;
-import com.example.backend.user.Role;
-import com.example.backend.user.User;
-import com.example.backend.user.UserRepository;
+import com.example.backend.security.JwtService;
+import com.example.backend.user.entity.Role;
+import com.example.backend.user.entity.User;
+import com.example.backend.user.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceGoogleLoginTest {

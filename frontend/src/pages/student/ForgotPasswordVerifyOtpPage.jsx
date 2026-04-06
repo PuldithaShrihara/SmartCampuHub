@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { forgotPasswordSendOtp, forgotPasswordVerifyOtp } from '../../api/auth.js'
-import '../AuthPage.css'
+import '../../styles/AuthPage.css'
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase()

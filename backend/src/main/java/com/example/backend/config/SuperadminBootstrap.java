@@ -11,9 +11,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import com.example.backend.user.Role;
-import com.example.backend.user.User;
-import com.example.backend.user.UserRepository;
+import com.example.backend.user.entity.Role;
+import com.example.backend.user.entity.User;
+import com.example.backend.user.repository.UserRepository;
 
 @Component
 @Order(1)
