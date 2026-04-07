@@ -1,4 +1,13 @@
 package com.example.backend.booking.dto;
 
-public record BookingFilterRequest() {
+import java.time.LocalDate;
+
+import com.example.backend.booking.entity.BookingStatus;
+
+public record BookingFilterRequest(
+	LocalDate bookingDate,
+	String resourceId,
+	String userId,
+	BookingStatus status
+) {
 }

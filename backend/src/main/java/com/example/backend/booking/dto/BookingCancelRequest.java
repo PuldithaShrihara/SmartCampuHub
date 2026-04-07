@@ -1,4 +1,8 @@
 package com.example.backend.booking.dto;
 
-public record BookingCancelRequest() {
+import jakarta.validation.constraints.NotBlank;
+
+public record BookingCancelRequest(
+	@NotBlank String cancelReason
+) {
 }

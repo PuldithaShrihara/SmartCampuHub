@@ -1,4 +1,11 @@
 package com.example.backend.booking.dto;
 
-public record AvailabilityResponse() {
+import java.time.LocalTime;
+
+public record AvailabilityResponse(
+	boolean available,
+	String message,
+	String conflictingBookingId,
+	LocalTime nextAvailableTime
+) {
 }
