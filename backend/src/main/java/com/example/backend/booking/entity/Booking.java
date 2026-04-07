@@ -1,13 +1,60 @@
 package com.example.backend.booking.entity;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.example.backend.resource.entity.Resource;
+import com.example.backend.user.entity.User;
+
+/**
+ * Campus resource booking persisted in MongoDB.
+ * <p>
+ * This project uses Spring Data MongoDB ({@code @Document}, {@code @DBRef}), not JPA.
+ * Enum values are stored by name in BSON (same idea as JPA {@code EnumType.STRING}).
+ */
 @Document(collection = "bookings")
 public class Booking {
 
 	@Id
 	private String id;
+
+	@DBRef
+	private User user;
+
+	@DBRef
+	private Resource resource;
+
+	private LocalDate bookingDate;
+
+	private LocalTime startTime;
+
+	private LocalTime endTime;
+
+	private String purpose;
+
+	private Integer expectedAttendees;
+
+	private BookingStatus status;
+
+	private String rejectionReason;
+
+	private String cancelReason;
+
+	@CreatedDate
+	private Instant createdAt;
+
+	@LastModifiedDate
+	private Instant updatedAt;
+
+	public Booking() {
+	}
 
 	public String getId() {
 		return id;
@@ -17,4 +64,99 @@ public class Booking {
 		this.id = id;
 	}
 
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public Resource getResource() {
+		return resource;
+	}
+
+	public void setResource(Resource resource) {
+		this.resource = resource;
+	}
+
+	public LocalDate getBookingDate() {
+		return bookingDate;
+	}
+
+	public void setBookingDate(LocalDate bookingDate) {
+		this.bookingDate = bookingDate;
+	}
+
+	public LocalTime getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(LocalTime startTime) {
+		this.startTime = startTime;
+	}
+
+	public LocalTime getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(LocalTime endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getPurpose() {
+		return purpose;
+	}
+
+	public void setPurpose(String purpose) {
+		this.purpose = purpose;
+	}
+
+	public Integer getExpectedAttendees() {
+		return expectedAttendees;
+	}
+
+	public void setExpectedAttendees(Integer expectedAttendees) {
+		this.expectedAttendees = expectedAttendees;
+	}
+
+	public BookingStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(BookingStatus status) {
+		this.status = status;
+	}
+
+	public String getRejectionReason() {
+		return rejectionReason;
+	}
+
+	public void setRejectionReason(String rejectionReason) {
+		this.rejectionReason = rejectionReason;
+	}
+
+	public String getCancelReason() {
+		return cancelReason;
+	}
+
+	public void setCancelReason(String cancelReason) {
+		this.cancelReason = cancelReason;
+	}
+
+	public Instant getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(Instant createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public Instant getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void setUpdatedAt(Instant updatedAt) {
+		this.updatedAt = updatedAt;
+	}
 }
