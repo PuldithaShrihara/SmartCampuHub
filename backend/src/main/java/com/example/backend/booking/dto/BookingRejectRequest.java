@@ -1,4 +1,8 @@
 package com.example.backend.booking.dto;
 
-public record BookingRejectRequest() {
+import jakarta.validation.constraints.NotBlank;
+
+public record BookingRejectRequest(
+	@NotBlank String rejectionReason
+) {
 }
