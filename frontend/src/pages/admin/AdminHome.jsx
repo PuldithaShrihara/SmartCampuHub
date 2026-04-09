@@ -1,128 +1,99 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth.js'
-import '../../styles/DashboardLayout.css'
+import MainCalendar from '../../components/dashboard/MainCalendar'
+import '../../styles/DashboardRedesign.css'
 
-const mockData = {
-  totalResources: 25,
-  totalBookings: 150,
-  pendingApprovals: 8,
-  totalUsers: 1200,
-  pendingBookings: [
-    {
-      id: 1,
-      resource: 'Lecture Hall A',
-      student: 'John Doe',
-      date: '25-Mar',
-      time: '14:00',
-    },
-    {
-      id: 2,
-      resource: 'Lab 101',
-      student: 'Jane Smith',
-      date: '26-Mar',
-      time: '10:00',
-    },
-  ],
-}
-
-function Stat({ label, value, danger }) {
-  return (
-    <div className="dash-card" style={{ marginBottom: 0 }}>
-      <h2>{label}</h2>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 30,
-          fontWeight: 700,
-          color: danger ? '#c62828' : '#1a237e',
-        }}
-      >
-        {value}
-      </p>
-    </div>
-  )
-}
+const venues = [
+  { id: 'lecture-hall-a', name: 'Lecture Hall A', capacity: 200, status: 'Busy' },
+  { id: 'lab-101', name: 'Lab 101', capacity: 30, status: 'Free' },
+  { id: 'seminar-room', name: 'Seminar Room', capacity: 50, status: 'Free' },
+  { id: 'auditorium', name: 'Auditorium', capacity: 500, status: 'Busy' },
+]
 
 export default function AdminHome() {
   const { user } = useAuth()
+  
   return (
-    <div>
-      <div className="dash-card">
-        <h2>Hello, {user?.fullName || 'Admin'}!</h2>
-        <p style={{ color: '#616161', margin: 0 }}>Admin Dashboard</p>
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <Stat label="Total Resources" value={mockData.totalResources} />
-        <Stat label="Total Bookings" value={mockData.totalBookings} />
-        <Stat
-          label="Pending Approvals"
-          value={mockData.pendingApprovals}
-          danger={mockData.pendingApprovals > 0}
-        />
-        <Stat label="Total Users" value={mockData.totalUsers} />
-      </div>
-
-      <div className="dash-card">
-        <h2>Quick actions</h2>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link to="/admin/pending-bookings" className="dash-badge">
-            Review Pending Bookings
-          </Link>
-          <Link to="/admin/resources" className="dash-badge">
-            Manage Resources
-          </Link>
-          <Link to="/admin/statistics" className="dash-badge">
-            View Statistics
-          </Link>
-          <Link to="/admin/resources" className="dash-badge">
-            Create Resource
-          </Link>
+    <div className="admin-home">
+      {/* Premium Welcome Card */}
+      <div className="dash-card" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+        color: '#fff',
+        border: 'none',
+        padding: '30px'
+      }}>
+        <div>
+          <h2 style={{ color: '#fff', fontSize: '1.75rem' }}>Hello, {user?.fullName || 'Admin'}!</h2>
+          <p style={{ color: '#94a3b8', margin: '8px 0 0 0' }}>Welcome back to your Smart Campus dashboard.</p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>System Status</div>
+          <div style={{ fontWeight: 600, color: '#10b981' }}>● All systems operational</div>
         </div>
       </div>
 
-      <div className="dash-card">
-        <h2>
-          Pending Bookings{' '}
-          <span className="dash-badge">{mockData.pendingApprovals}</span>
-        </h2>
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Resource</th>
-                <th>Student</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockData.pendingBookings.map((booking) => (
-                <tr key={booking.id}>
-                  <td>{booking.resource}</td>
-                  <td>{booking.student}</td>
-                  <td>{booking.date}</td>
-                  <td>{booking.time}</td>
-                  <td>
-                    <button type="button">APPROVE</button>{' '}
-                    <button type="button">REJECT</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, marginTop: 24 }}>
+        {/* Main Content: Calendar */}
+        <div>
+          <MainCalendar />
         </div>
-        <p style={{ marginTop: 12 }}>
-          <Link to="/admin/pending-bookings">View all pending</Link>
-        </p>
+
+        {/* Sidebar: Venues Analyis Selection */}
+        <div className="dash-card">
+          <h3 style={{ marginBottom: 16 }}>Resource Venues</h3>
+          <p style={{ fontSize: 13, color: 'var(--cal-muted)', marginBottom: 20 }}>
+            Click on a venue to view its weekly analysis and occupancy data.
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {venues.map(venue => (
+              <Link 
+                key={venue.id}
+                to={`/admin/analysis/${venue.id}`}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: '1px solid var(--cal-border)',
+                  background: '#fff',
+                  transition: 'all 0.2s'
+                }}
+                className="venue-item-link"
+              >
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--cal-text)' }}>{venue.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--cal-muted)' }}>Cap: {venue.capacity}</div>
+                </div>
+                <div style={{ 
+                  fontSize: 11, 
+                  fontWeight: 700, 
+                  color: venue.status === 'Free' ? '#10b981' : '#f59e0b',
+                  background: venue.status === 'Free' ? '#ecfdf5' : '#fffbeb',
+                  padding: '4px 8px',
+                  borderRadius: 4
+                }}>
+                  {venue.status}
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--cal-border)' }}>
+            <h4 style={{ fontSize: 14, marginBottom: 12 }}>Quick Stats</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: 'var(--cal-muted)' }}>Total Venue Usage</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>78%</span>
+            </div>
+            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: '78%', height: '100%', background: 'var(--cal-primary)' }}></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
