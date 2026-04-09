@@ -2,13 +2,19 @@
 import BookingForm from '../../components/booking/BookingForm.jsx'
 import Modal from '../../components/common/Modal.jsx'
 
+import { createBooking } from '../../api/bookingApi.js'
+
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
 
-  function handleDraftSubmit() {
-    // Placeholder until API integration is added.
-    alert('Booking draft captured. Backend submission will be added next.')
-    setShowCreateForm(false)
+  async function handleDraftSubmit(data) {
+    try {
+      await createBooking(data)
+      alert('Booking submitted successfully!')
+      setShowCreateForm(false)
+    } catch (err) {
+      alert('Failed to submit booking: ' + err.message)
+    }
   }
 
   return (
