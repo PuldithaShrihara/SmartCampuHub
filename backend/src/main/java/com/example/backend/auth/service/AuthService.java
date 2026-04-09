@@ -41,6 +41,7 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private static final String DEFAULT_GOOGLE_STUDENT_EMAIL_DOMAIN = "my.sliit.lk";
+	private static final String DEFAULT_STUDENT_EMAIL_DOMAIN = "my.sliit.lk";
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
@@ -74,6 +75,7 @@ public class AuthService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
 		}
 		String email = request.email().trim().toLowerCase();
+		assertStudentEmailDomainAllowed(email);
 		if (email.endsWith("@smartcampus.local")) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Use a real email address to receive the verification link.");
@@ -306,6 +308,7 @@ public class AuthService {
 	}
 
 	public AuthResponse loginStudent(StudentLoginRequest request) {
+		assertStudentEmailDomainAllowed(request.email());
 		User user = loadUserForPasswordCheck(request.email(), request.password());
 		Role effective = user.getRole() == null ? Role.STUDENT : user.getRole();
 		if (effective != Role.STUDENT) {
@@ -370,6 +373,18 @@ public class AuthService {
 		if (Boolean.FALSE.equals(user.getVerified())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Please verify your email before logging in");
+		}
+	}
+
+	private void assertStudentEmailDomainAllowed(String rawEmail) {
+		if (rawEmail == null || rawEmail.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+		}
+		String email = rawEmail.trim().toLowerCase(Locale.ROOT);
+		if (!email.endsWith("@" + DEFAULT_STUDENT_EMAIL_DOMAIN)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"Student email/password sign-in is only allowed for @" + DEFAULT_STUDENT_EMAIL_DOMAIN
+							+ " email addresses.");
 		}
 	}
 
