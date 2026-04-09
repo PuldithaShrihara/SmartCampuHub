@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import BookingForm from '../../components/booking/BookingForm.jsx'
+import Modal from '../../components/common/Modal.jsx'
 
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -7,6 +8,7 @@ export default function MyBookingsPage() {
   function handleDraftSubmit() {
     // Placeholder until API integration is added.
     alert('Booking draft captured. Backend submission will be added next.')
+    setShowCreateForm(false)
   }
 
   return (
@@ -28,18 +30,19 @@ export default function MyBookingsPage() {
             padding: '8px 14px',
             fontWeight: 600,
           }}
-          onClick={() => setShowCreateForm((prev) => !prev)}
+          onClick={() => setShowCreateForm(true)}
         >
-          {showCreateForm ? 'Hide Create Booking Form' : 'Create Booking'}
+          Create Booking
         </button>
       </section>
 
-      {showCreateForm && (
-        <section className="dash-card">
-          <h3 style={{ marginBottom: 12 }}>Create Booking</h3>
-          <BookingForm onSubmit={handleDraftSubmit} />
-        </section>
-      )}
+      <Modal
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title="Create New Booking"
+      >
+        <BookingForm onSubmit={handleDraftSubmit} />
+      </Modal>
 
       <section className="dash-card">
         <h3 style={{ marginBottom: 12 }}>Recent Requests</h3>
