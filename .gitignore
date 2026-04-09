@@ -3,3 +3,4 @@
 .env.*
 !.env.example
 !.env.sample
+backend/src/main/resources/application-local.properties
