@@ -4,6 +4,9 @@ import { studentRegister } from '../../api/authApi.js'
 import { StudentGoogleAuthSection } from '../student/StudentGoogleAuthSection.jsx'
 import '../../styles/AuthPage.css'
 
+const STUDENT_EMAIL_DOMAIN = 'my.sliit.lk'
+const STUDENT_DOMAIN_REJECT_MESSAGE = `Only @${STUDENT_EMAIL_DOMAIN} email addresses are allowed for student signup.`
+
 export default function StudentSignupPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
@@ -25,6 +28,10 @@ export default function StudentSignupPage() {
     const regEmail = email.trim().toLowerCase()
     if (!regEmail.includes('@')) {
       setError('Enter your full email address so we can send the OTP.')
+      return
+    }
+    if (!regEmail.endsWith(`@${STUDENT_EMAIL_DOMAIN}`)) {
+      setError(STUDENT_DOMAIN_REJECT_MESSAGE)
       return
     }
     setLoading(true)
@@ -83,7 +90,7 @@ export default function StudentSignupPage() {
                 id="stu-email"
                 type="email"
                 autoComplete="email"
-                placeholder="e.g. your.email@gmail.com"
+                placeholder={`e.g. your.name@${STUDENT_EMAIL_DOMAIN}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

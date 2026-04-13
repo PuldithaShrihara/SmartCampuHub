@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { studentLogin } from '../../api/authApi.js'
 import { useAuth } from '../../context/useAuth.js'
-import { normalizeCampusEmail } from '../../utils/loginIdentifier.js'
 import { StudentGoogleAuthSection } from '../student/StudentGoogleAuthSection.jsx'
 import '../../styles/AuthPage.css'
+
+const STUDENT_EMAIL_DOMAIN = 'my.sliit.lk'
+const STUDENT_DOMAIN_REJECT_MESSAGE = `Only @${STUDENT_EMAIL_DOMAIN} email addresses are allowed for student login.`
 
 export default function StudentLoginPage() {
   const navigate = useNavigate()
@@ -14,13 +16,32 @@ export default function StudentLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  function normalizeStudentLoginEmail(raw) {
+    const t = raw.trim().toLowerCase()
+    if (!t) {
+      return { email: t, error: 'Email is required' }
+    }
+    if (t.includes('@')) {
+      if (!t.endsWith(`@${STUDENT_EMAIL_DOMAIN}`)) {
+        return { email: t, error: STUDENT_DOMAIN_REJECT_MESSAGE }
+      }
+      return { email: t, error: null }
+    }
+    return { email: `${t}@${STUDENT_EMAIL_DOMAIN}`, error: null }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    const normalized = normalizeStudentLoginEmail(email)
+    if (normalized.error) {
+      setError(normalized.error)
+      return
+    }
     setLoading(true)
     try {
       const data = await studentLogin({
-        email: normalizeCampusEmail(email),
+        email: normalized.email,
         password,
       })
       login(data)
