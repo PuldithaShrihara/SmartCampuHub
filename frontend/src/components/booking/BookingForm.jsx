@@ -1,18 +1,14 @@
 import { useState } from 'react'
 
-const fallbackData = {
-  resourceId: 'res-cl2',
-  resourceName: 'Computer Lab 2',
-  location: 'Engineering Block',
-  date: new Date().toISOString().split('T')[0],
-  startTime: '09:00',
-  endTime: '11:00',
-  attendees: 32,
-  purpose: 'Study Session',
-}
-
-export default function BookingForm({ initialValues = fallbackData, onSubmit }) {
-  const [formData, setFormData] = useState({ ...fallbackData, ...initialValues })
+export default function BookingForm({ onSubmit }) {
+  const [formData, setFormData] = useState({
+    resourceId: '',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '',
+    endTime: '',
+    attendees: '',
+    purpose: '',
+  })
 
   function handleChange(e) {
     const { name, value } = e.target
@@ -36,12 +32,24 @@ export default function BookingForm({ initialValues = fallbackData, onSubmit }) 
   return (
     <form className="dash-form-grid" onSubmit={handleSubmit}>
       <div>
-        <label>Resource ID (e.g. res-lha, res-cl2)</label>
-        <input name="resourceId" value={formData.resourceId} onChange={handleChange} required />
+        <label>Resource ID</label>
+        <input
+          name="resourceId"
+          placeholder="e.g. res-lha"
+          value={formData.resourceId}
+          onChange={handleChange}
+          required
+        />
       </div>
       <div>
         <label>Purpose</label>
-        <input name="purpose" value={formData.purpose} onChange={handleChange} required />
+        <input
+          name="purpose"
+          placeholder="e.g. Study Session"
+          value={formData.purpose}
+          onChange={handleChange}
+          required
+        />
       </div>
       <div>
         <label>Date</label>
@@ -57,7 +65,15 @@ export default function BookingForm({ initialValues = fallbackData, onSubmit }) 
       </div>
       <div>
         <label>Expected Attendees</label>
-        <input type="number" name="attendees" min="1" value={formData.attendees} onChange={handleChange} required />
+        <input
+          type="number"
+          name="attendees"
+          min="1"
+          placeholder="0"
+          value={formData.attendees}
+          onChange={handleChange}
+          required
+        />
       </div>
       <button type="submit">Submit Booking</button>
     </form>

@@ -26,6 +26,7 @@ public class DemoResourcesBootstrap implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedIfAbsent("res-lha", "Lecture Hall A", "Academic Block A", 120);
         seedIfAbsent("res-cl2", "Computer Lab 2", "Engineering Wing", 45);
+        seedIfAbsent("lcc A104", "Lecture Complex Center A104", "Main Campus", 60);
     }
 
     private void seedIfAbsent(String id, String name, String location, Integer capacity) {
