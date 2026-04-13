@@ -6,6 +6,7 @@ import {
   FaCalendar,
   FaCog,
   FaHome,
+  FaPlus,
   FaThLarge,
 } from 'react-icons/fa'
 import Sidebar from '../../components/common/Sidebar.jsx'
@@ -15,6 +16,7 @@ import { logout as clearSession } from '../../api/authApi.js'
 import { getUnreadNotificationCount } from '../../api/notifications.js'
 import StudentHome from './StudentHome.jsx'
 import BrowseResourcesPage from './BrowseResourcesPage.jsx'
+import CreateBookingPage from './CreateBookingPage.jsx'
 import MyBookingsPage from './MyBookingsPage.jsx'
 import BookingGridViewPage from './BookingGridViewPage.jsx'
 import StudentNotificationsPage from './StudentNotificationsPage.jsx'
@@ -83,6 +85,7 @@ export default function StudentDashboard() {
           <Routes>
             <Route path="/" element={<StudentHome />} />
             <Route path="/resources" element={<BrowseResourcesPage />} />
+            <Route path="/bookings/create" element={<CreateBookingPage />} />
             <Route path="/bookings" element={<MyBookingsPage />} />
             <Route path="/bookings/grid" element={<BookingGridViewPage />} />
             <Route

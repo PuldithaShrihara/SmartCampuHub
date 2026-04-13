@@ -23,6 +23,7 @@ import UsersPage from './UsersPage.jsx'
 import Notifications from './Notifications.jsx'
 import StatisticsPage from './StatisticsPage.jsx'
 import SettingsPage from './SettingsPage.jsx'
+import VenueAnalysisPage from './VenueAnalysisPage.jsx'
 import { getUnreadNotificationCount } from '../../api/notifications.js'
 import '../../styles/StudentDashboard.css'
 
@@ -97,6 +98,7 @@ export default function AdminDashboard() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/statistics" element={<StatisticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/analysis/:venueId" element={<VenueAnalysisPage />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </div>

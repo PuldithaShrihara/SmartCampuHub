@@ -1,17 +1,20 @@
 ﻿import { useState } from 'react'
 import BookingForm from '../../components/booking/BookingForm.jsx'
+import Modal from '../../components/common/Modal.jsx'
+
+import { createBooking } from '../../api/bookingApi.js'
 
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const dummyBookings = [
-    { id: 'BK-1021', resource: 'Lecture Hall A', date: '2026-04-03', status: 'APPROVED' },
-    { id: 'BK-1028', resource: 'Physics Lab', date: '2026-04-05', status: 'PENDING' },
-    { id: 'BK-1034', resource: 'Seminar Room 2', date: '2026-04-07', status: 'REJECTED' },
-  ]
 
-  function handleDraftSubmit() {
-    // Placeholder until API integration is added.
-    alert('Booking draft captured. Backend submission will be added next.')
+  async function handleDraftSubmit(data) {
+    try {
+      await createBooking(data)
+      alert('Booking submitted successfully!')
+      setShowCreateForm(false)
+    } catch (err) {
+      alert('Failed to submit booking: ' + err.message)
+    }
   }
 
   return (
@@ -23,47 +26,35 @@ export default function MyBookingsPage() {
         </p>
         <button
           type="button"
-          className="dash-badge"
-          style={{ marginTop: 12, cursor: 'pointer' }}
-          onClick={() => setShowCreateForm((prev) => !prev)}
+          style={{
+            marginTop: 12,
+            cursor: 'pointer',
+            background: '#2563eb',
+            color: '#ffffff',
+            border: '1px solid #1d4ed8',
+            borderRadius: 8,
+            padding: '8px 14px',
+            fontWeight: 600,
+          }}
+          onClick={() => setShowCreateForm(true)}
         >
-          {showCreateForm ? 'Hide Create Booking Form' : 'Create Booking'}
+          Create Booking
         </button>
       </section>
 
-      {showCreateForm && (
-        <section className="dash-card">
-          <h3 style={{ marginBottom: 12 }}>Create Booking</h3>
-          <BookingForm onSubmit={handleDraftSubmit} />
-        </section>
-      )}
+      <Modal
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title="Create New Booking"
+      >
+        <BookingForm onSubmit={handleDraftSubmit} />
+      </Modal>
 
       <section className="dash-card">
-        <h3 style={{ marginBottom: 12 }}>Recent Requests (Dummy)</h3>
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Booking ID</th>
-                <th>Resource</th>
-                <th>Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dummyBookings.map((booking) => (
-                <tr key={booking.id}>
-                  <td>{booking.id}</td>
-                  <td>{booking.resource}</td>
-                  <td>{booking.date}</td>
-                  <td>
-                    <span className="dash-badge">{booking.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3 style={{ marginBottom: 12 }}>Recent Requests</h3>
+        <p style={{ color: 'var(--text-muted)' }}>
+          No bookings to show yet. Create a booking to see it listed here.
+        </p>
       </section>
     </>
   )

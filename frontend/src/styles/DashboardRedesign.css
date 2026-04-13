@@ -1,0 +1,328 @@
+:root {
+  --cal-bg: #ffffff;
+  --cal-border: #e2e8f0;
+  --cal-header-bg: #f8faff;
+  --cal-text: #1e1b4b;
+  --cal-muted: #64748b;
+  --cal-primary: #6366f1;
+  --cal-primary-light: #eef2ff;
+
+  /* Label Colors - Premium Palette */
+  --label-green-bg: #f0fdf4;
+  --label-green-text: #15803d;
+  --label-yellow-bg: #fffbeb;
+  --label-yellow-text: #a16207;
+  --label-blue-bg: #eff6ff;
+  --label-blue-text: #1d4ed8;
+  --label-red-bg: #fef2f2;
+  --label-red-text: #b91c1c;
+  --label-neutral-bg: #f8fafc;
+  --label-neutral-text: #475569;
+}
+
+.calendar-container {
+  background: var(--cal-bg);
+  border-radius: 12px;
+  border: 1px solid var(--cal-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--cal-border);
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-center h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  margin: 0;
+}
+
+.cal-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--cal-border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cal-text);
+}
+
+.cal-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.cal-btn.primary {
+  background: var(--cal-primary);
+  color: #fff;
+  border-color: var(--cal-primary);
+}
+
+.cal-btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+.cal-toggle-group {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.cal-toggle-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cal-muted);
+}
+
+.cal-toggle-btn.active {
+  background: #fff;
+  color: var(--cal-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+}
+
+.grid-header {
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cal-text);
+  border-bottom: 1px solid var(--cal-border);
+  background: var(--cal-header-bg);
+}
+
+.grid-cell {
+  min-height: 120px;
+  border-bottom: 1px solid var(--cal-border);
+  border-right: 1px solid var(--cal-border);
+  padding: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.grid-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.grid-cell:hover {
+  background: #f8fafc;
+}
+
+.grid-cell.other-month {
+  background: #fafbfc;
+}
+
+.grid-cell.other-month .day-number {
+  color: var(--cal-muted);
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Labels */
+.cal-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.label-green {
+  background: var(--label-green-bg);
+  color: var(--label-green-text);
+}
+
+.label-green::before {
+  background: var(--label-green-text);
+}
+
+.label-yellow {
+  background: var(--label-yellow-bg);
+  color: var(--label-yellow-text);
+}
+
+.label-yellow::before {
+  background: var(--label-yellow-text);
+}
+
+.label-blue {
+  background: var(--label-blue-bg);
+  color: var(--label-blue-text);
+}
+
+.label-blue::before {
+  background: var(--label-blue-text);
+}
+
+.label-red {
+  background: var(--label-red-bg);
+  color: var(--label-red-text);
+}
+
+.label-red::before {
+  background: var(--label-red-text);
+}
+
+.label-neutral {
+  background: var(--label-neutral-bg);
+  color: var(--label-neutral-text);
+}
+
+.label-neutral::before {
+  background: var(--label-neutral-text);
+}
+
+/* Weekly Analysis Specific */
+.analysis-header {
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--cal-border);
+}
+
+.venue-info h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.venue-info p {
+  color: var(--cal-muted);
+  margin: 0;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(7, 1fr);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--cal-border);
+  overflow: auto;
+}
+
+.time-header {
+  padding: 12px;
+  background: var(--cal-header-bg);
+  border-bottom: 1px solid var(--cal-border);
+  border-right: 1px solid var(--cal-border);
+}
+
+.column-header {
+  padding: 12px;
+  text-align: center;
+  background: var(--cal-header-bg);
+  border-bottom: 1px solid var(--cal-border);
+  border-right: 1px solid var(--cal-border);
+}
+
+.time-cell {
+  padding: 12px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--cal-muted);
+  border-bottom: 1px solid var(--cal-border);
+  border-right: 1px solid var(--cal-border);
+  height: 60px;
+}
+
+.slot-cell {
+  height: 60px;
+  border-bottom: 1px solid var(--cal-border);
+  border-right: 1px solid var(--cal-border);
+  position: relative;
+}
+
+.booking-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Sidebar Hamburger Style Header */
+.hamburger-header {
+  background: #fff;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--cal-border);
+  margin-bottom: 24px;
+}
+
+.hamburger-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--cal-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cal-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: var(--cal-primary-light);
+}
