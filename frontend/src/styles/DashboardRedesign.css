@@ -1,22 +1,22 @@
 :root {
   --cal-bg: #ffffff;
-  --cal-border: #eef2f6;
-  --cal-header-bg: #f8fafc;
-  --cal-text: #1e293b;
-  --cal-muted: #94a3b8;
-  --cal-primary: #3b82f6;
-  --cal-primary-light: #eff6ff;
-  
-  /* Lable Colors */
-  --label-green-bg: #dcfce7;
-  --label-green-text: #166534;
-  --label-yellow-bg: #fef9c3;
-  --label-yellow-text: #854d0e;
-  --label-blue-bg: #dbeafe;
-  --label-blue-text: #1e40af;
-  --label-red-bg: #fee2e2;
-  --label-red-text: #991b1b;
-  --label-neutral-bg: #f1f5f9;
+  --cal-border: #e2e8f0;
+  --cal-header-bg: #f8faff;
+  --cal-text: #1e1b4b;
+  --cal-muted: #64748b;
+  --cal-primary: #6366f1;
+  --cal-primary-light: #eef2ff;
+
+  /* Label Colors - Premium Palette */
+  --label-green-bg: #f0fdf4;
+  --label-green-text: #15803d;
+  --label-yellow-bg: #fffbeb;
+  --label-yellow-text: #a16207;
+  --label-blue-bg: #eff6ff;
+  --label-blue-text: #1d4ed8;
+  --label-red-bg: #fef2f2;
+  --label-red-text: #b91c1c;
+  --label-neutral-bg: #f8fafc;
   --label-neutral-text: #475569;
 }
 
@@ -38,7 +38,8 @@
   border-bottom: 1px solid var(--cal-border);
 }
 
-.toolbar-left, .toolbar-right {
+.toolbar-left,
+.toolbar-right {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -178,20 +179,50 @@
   flex-shrink: 0;
 }
 
-.label-green { background: var(--label-green-bg); color: var(--label-green-text); }
-.label-green::before { background: var(--label-green-text); }
+.label-green {
+  background: var(--label-green-bg);
+  color: var(--label-green-text);
+}
 
-.label-yellow { background: var(--label-yellow-bg); color: var(--label-yellow-text); }
-.label-yellow::before { background: var(--label-yellow-text); }
+.label-green::before {
+  background: var(--label-green-text);
+}
 
-.label-blue { background: var(--label-blue-bg); color: var(--label-blue-text); }
-.label-blue::before { background: var(--label-blue-text); }
+.label-yellow {
+  background: var(--label-yellow-bg);
+  color: var(--label-yellow-text);
+}
 
-.label-red { background: var(--label-red-bg); color: var(--label-red-text); }
-.label-red::before { background: var(--label-red-text); }
+.label-yellow::before {
+  background: var(--label-yellow-text);
+}
 
-.label-neutral { background: var(--label-neutral-bg); color: var(--label-neutral-text); }
-.label-neutral::before { background: var(--label-neutral-text); }
+.label-blue {
+  background: var(--label-blue-bg);
+  color: var(--label-blue-text);
+}
+
+.label-blue::before {
+  background: var(--label-blue-text);
+}
+
+.label-red {
+  background: var(--label-red-bg);
+  color: var(--label-red-text);
+}
+
+.label-red::before {
+  background: var(--label-red-text);
+}
+
+.label-neutral {
+  background: var(--label-neutral-bg);
+  color: var(--label-neutral-text);
+}
+
+.label-neutral::before {
+  background: var(--label-neutral-text);
+}
 
 /* Weekly Analysis Specific */
 .analysis-header {
