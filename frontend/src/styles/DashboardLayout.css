@@ -125,10 +125,54 @@
 
 .dash-badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  background: #eff6ff;
-  color: #1d4ed8;
+  text-transform: uppercase;
+}
+
+.badge-pending {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+
+.badge-approved {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #dcfce7;
+}
+
+.badge-rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fee2e2;
+}
+
+.dash-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.dash-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(99, 102, 241, 0.3);
+}
+
+.res-name {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.res-id {
+  font-size: 12px;
+  color: var(--text-muted);
 }

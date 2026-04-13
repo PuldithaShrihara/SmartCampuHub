@@ -1,5 +1,7 @@
 package com.example.backend.booking.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.booking.dto.BookingRequest;
@@ -40,5 +42,16 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         return bookingMapper.toResponse(savedBooking);
+    }
+
+    @Override
+    public List<BookingResponse> getUserBookings(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
+
+        return bookingRepository.findByUser_Id(user.getId())
+                .stream()
+                .map(bookingMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }
