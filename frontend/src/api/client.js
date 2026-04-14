@@ -120,3 +120,64 @@ export async function apiDeleteAuth(path) {
   })
   return parseResponse(res)
 }
+
+/**
+ * @param {string} path
+ * @param {object} body
+ */
+export async function apiPutAuth(path, body = {}) {
+  const token = getToken()
+  if (!token) {
+    throw new Error('Not signed in')
+  }
+  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  })
+  return parseResponse(res)
+}
+
+/**
+ * @param {string} path
+ * @param {FormData} formData
+ */
+export async function apiPostAuthMultipart(path, formData) {
+  const token = getToken()
+  if (!token) {
+    throw new Error('Not signed in')
+  }
+  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
+  return parseResponse(res)
+}
+
+/**
+ * @param {string} path
+ * @param {FormData} formData
+ */
+export async function apiPutAuthMultipart(path, formData) {
+  const token = getToken()
+  if (!token) {
+    throw new Error('Not signed in')
+  }
+  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
+  return parseResponse(res)
+}
