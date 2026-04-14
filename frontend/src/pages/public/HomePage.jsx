@@ -5,8 +5,12 @@ import {
   FaCalendar,
   FaExclamationTriangle,
   FaBell,
+  FaSearch,
+  FaCheckCircle,
 } from 'react-icons/fa'
 import '../../styles/HomePage.css'
+import heroGroup from '../../assets/hero-group.png'
+import heroLibrary from '../../assets/hero-library.png'
 
 const steps = [
   {
@@ -38,28 +42,28 @@ const steps = [
 const features = [
   {
     Icon: FaBuilding,
-    iconColor: '#3f51b5',
+    iconColor: '#6366f1',
     title: 'Facilities Management',
     description:
       'Manage and catalog all campus resources including lecture halls, labs, and equipment.',
   },
   {
     Icon: FaCalendar,
-    iconColor: '#FF9800',
+    iconColor: '#8b5cf6',
     title: 'Easy Booking System',
     description:
       'Book resources with conflict detection. Get instant approval notifications for your requests.',
   },
   {
     Icon: FaExclamationTriangle,
-    iconColor: '#f44336',
+    iconColor: '#f43f5e',
     title: 'Incident Tracking',
     description:
       'Report and track maintenance issues. Assign to technicians and monitor resolution progress.',
   },
   {
     Icon: FaBell,
-    iconColor: '#4CAF50',
+    iconColor: '#10b981',
     title: 'Real-time Notifications',
     description:
       'Stay updated with instant notifications for bookings, ticket updates, and system events.',
@@ -78,121 +82,128 @@ function HomePage() {
 
   return (
     <div className="home-page" data-reduced-motion={reduceMotion || undefined}>
-      <section className="home-hero" aria-label="Welcome">
-        <div className="home-hero-inner">
-          <h1 className="home-hero-title">Smart Campus Hub</h1>
-          <p className="home-hero-tagline">
-            Manage Campus Operations Efficiently
-          </p>
-          <p className="home-hero-desc">
-            A unified platform for booking resources, managing incidents, and
-            tracking notifications. Streamline your campus operations today.
-          </p>
-          <button type="button" className="home-btn" onClick={goStudentSignup}>
-            Get Started
-          </button>
+      <header className="home-header">
+        <div className="home-header-inner">
+          <div className="home-logo">
+            <span className="logo-accent">Smart</span> Campus
+          </div>
+          <nav className="home-nav">
+            <a href="#features">Features</a>
+            <a href="#how">How It Works</a>
+            <Link to="/staff/login">Staff Portal</Link>
+            <Link to="/student/login" className="nav-login">Login</Link>
+            <button className="nav-register" onClick={goStudentSignup}>Register</button>
+          </nav>
         </div>
-      </section>
+      </header>
 
-      <section className="home-features" aria-labelledby="features-heading">
-        <h2 id="features-heading" className="visually-hidden">
-          Features
-        </h2>
-        <div className="home-features-inner">
-          <div className="home-features-grid">
-            {features.map(({ Icon, iconColor, title, description }) => (
-              <article key={title} className="home-feature-card">
-                <div className="home-feature-icon-wrap">
-                  {createElement(Icon, {
-                    size: 40,
-                    color: iconColor,
-                    'aria-hidden': true,
-                  })}
+      <div className="home-container">
+        <section className="home-hero-v2">
+          <div className="hero-content">
+            <h4 className="hero-sub">Best Digital Campus</h4>
+            <h1 className="hero-title">
+              Unified Education Platform <span className="text-gradient">for Modern Students</span>
+            </h1>
+            <p className="hero-desc">
+              Manage your campus life efficiently. Book resources, track incidents, and stay updated with real-time notifications in one place.
+            </p>
+            <div className="hero-search-bar">
+              <div className="search-input-wrap">
+                <FaSearch className="search-icon" />
+                <input type="text" placeholder="Search facilities or services..." />
+              </div>
+              <button className="search-btn" onClick={goStudentSignup}>Get Started</button>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="visual-container">
+              <img src={heroGroup} alt="Students learning" className="img-primary" />
+              <img src={heroLibrary} alt="Library" className="img-secondary" />
+              <div className="hero-badge badge-discount">
+                <FaCheckCircle className="badge-icon" />
+                <div>
+                  <p className="badge-text">Manage everything</p>
+                  <p className="badge-sub">In one unified platform</p>
                 </div>
-                <h3 className="home-feature-title">{title}</h3>
-                <p className="home-feature-desc">{description}</p>
+              </div>
+              <div className="hero-badge badge-expert">
+                <FaCheckCircle className="badge-icon" />
+                <div>
+                  <p className="badge-text">24/7 Support</p>
+                  <p className="badge-sub">Smart assistance</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="home-features-v2">
+          <div className="section-header">
+            <h2 className="section-title">Powerful Features</h2>
+            <p className="section-desc">Streamlining operations for students and faculty alike.</p>
+          </div>
+          <div className="features-grid">
+            {features.map(({ Icon, iconColor, title, description }) => (
+              <article key={title} className="feature-card-v2">
+                <div className="feature-icon-v2" style={{ backgroundColor: `${iconColor}22`, color: iconColor }}>
+                  {createElement(Icon, { size: 24 })}
+                </div>
+                <h3 className="feature-card-title">{title}</h3>
+                <p className="feature-card-desc">{description}</p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="home-how" aria-labelledby="how-heading">
-        <div className="home-how-inner">
-          <h2 id="how-heading" className="home-how-title">
-            How It Works
-          </h2>
-          <div className="home-steps-row">
-            {steps.map((step, index) => (
-              <Fragment key={step.num}>
-                {index > 0 ? (
-                  <div className="home-step-connector" aria-hidden="true" />
-                ) : null}
-                <div className="home-step">
-                  <div className="home-step-num">{step.num}</div>
-                  <h3 className="home-step-title">{step.title}</h3>
-                  <p className="home-step-desc">{step.description}</p>
-                </div>
-              </Fragment>
+        <section id="how" className="home-how-v2">
+          <div className="section-header">
+            <h2 className="section-title">How It Works</h2>
+            <p className="section-desc">Get started in four easy steps.</p>
+          </div>
+          <div className="steps-container-v2">
+            {steps.map((step) => (
+              <div key={step.num} className="step-card-v2">
+                <div className="step-number-v2">{step.num}</div>
+                <h3 className="step-title-v2">{step.title}</h3>
+                <p className="step-desc-v2">{step.description}</p>
+              </div>
             ))}
           </div>
+        </section>
+
+        <section className="home-cta-v2">
+          <div className="cta-inner">
+            <h2 className="cta-title">Ready to Experience Smart Campus?</h2>
+            <p className="cta-desc">Join thousands of students and faculty members today.</p>
+            <button className="cta-btn-v2" onClick={goStudentSignup}>Create Account Now</button>
+          </div>
+        </section>
+      </div>
+
+      <footer className="home-footer-v2">
+        <div className="footer-content">
+          <div className="footer-brand">
+            <div className="home-logo">Smart Campus</div>
+            <p>Empowering the next generation of academic excellence.</p>
+          </div>
+          <div className="footer-links-grid">
+            <div className="footer-group">
+              <h4>Platform</h4>
+              <Link to="/student/login">Student Portal</Link>
+              <Link to="/staff/login">Staff Portal</Link>
+              <Link to="/superadmin/login">Administration</Link>
+            </div>
+            <div className="footer-group">
+              <h4>Support</h4>
+              <a href="#about">About Us</a>
+              <a href="#contact">Contact</a>
+              <a href="#terms">Terms of Service</a>
+            </div>
+          </div>
         </div>
-      </section>
-
-      <section className="home-cta" aria-labelledby="cta-heading">
-        <h2 id="cta-heading" className="home-cta-title">
-          Ready to Streamline Campus Operations?
-        </h2>
-        <button type="button" className="home-btn" onClick={goStudentSignup}>
-          Start Now
-        </button>
-      </section>
-
-      <footer className="home-footer">
-        <nav className="home-footer-links" aria-label="Footer">
-          <Link className="home-footer-link" to="/student/login">
-            Student login
-          </Link>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <Link className="home-footer-link" to="/staff/login">
-            Staff login
-          </Link>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <Link className="home-footer-link" to="/superadmin/login">
-            Superadmin
-          </Link>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <a className="home-footer-link" href="#about">
-            About
-          </a>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <a className="home-footer-link" href="#contact">
-            Contact
-          </a>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <a className="home-footer-link" href="#privacy">
-            Privacy Policy
-          </a>
-          <span className="home-footer-sep" aria-hidden>
-            |
-          </span>
-          <a className="home-footer-link" href="#terms">
-            Terms
-          </a>
-        </nav>
-        <p className="home-footer-copy">
-          © 2026 Smart Campus Hub. All rights reserved.
-        </p>
+        <div className="footer-bottom">
+          <p>© 2026 Smart Campus Hub. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   )

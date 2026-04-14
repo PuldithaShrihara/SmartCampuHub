@@ -1,2 +1,5 @@
-/** Placeholder — implement booking API calls here. */
-export {}
+import { apiPostAuth } from './client.js'
+
+export async function createBooking(data) {
+    return apiPostAuth('/api/bookings', data)
+}
