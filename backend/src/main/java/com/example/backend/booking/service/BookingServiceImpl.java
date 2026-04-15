@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
 import com.example.backend.booking.entity.Booking;
+import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.booking.mapper.BookingMapper;
 import com.example.backend.booking.repository.BookingRepository;
 import com.example.backend.resource.entity.Resource;
@@ -61,5 +62,30 @@ public class BookingServiceImpl implements BookingService {
                 .stream()
                 .map(bookingMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public BookingResponse updateBookingStatus(String bookingId, BookingStatus status, String rejectionReason) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        booking.setStatus(status);
+        if (status == BookingStatus.REJECTED) {
+            String reason = rejectionReason != null ? rejectionReason.trim() : "";
+            booking.setRejectionReason(reason.isEmpty() ? "Rejected by admin" : reason);
+        } else {
+            booking.setRejectionReason(null);
+        }
+
+        Booking updatedBooking = bookingRepository.save(booking);
+        return bookingMapper.toResponse(updatedBooking);
+    }
+
+    @Override
+    public void deleteBooking(String bookingId) {
+        if (!bookingRepository.existsById(bookingId)) {
+            throw new RuntimeException("Booking not found: " + bookingId);
+        }
+        bookingRepository.deleteById(bookingId);
     }
 }
