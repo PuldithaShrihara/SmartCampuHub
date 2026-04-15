@@ -1,7 +1,10 @@
 package com.example.backend.booking.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.booking.dto.BookingRequest;
@@ -17,6 +20,7 @@ import com.example.backend.user.repository.UserRepository;
 
 @Service
 public class BookingServiceImpl implements BookingService {
+    private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
@@ -33,6 +37,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse createBooking(BookingRequest request, String userEmail) {
+        log.info("createBooking request received: userEmail={}, resourceId={}, date={}, start={}, end={}",
+                userEmail, request.resourceId(), request.bookingDate(), request.startTime(), request.endTime());
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
@@ -41,6 +48,8 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingMapper.toEntity(request, user, resource);
         Booking savedBooking = bookingRepository.save(booking);
+        log.info("createBooking persisted successfully: bookingId={}, status={}",
+                savedBooking.getId(), savedBooking.getStatus());
 
         return bookingMapper.toResponse(savedBooking);
     }
@@ -58,10 +67,22 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponse> getAllBookings() {
-        return bookingRepository.findAll()
+        List<Booking> bookings = bookingRepository.findAll();
+        List<String> malformedIds = bookings.stream()
+                .filter(booking -> booking.getResource() == null)
+                .map(Booking::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!malformedIds.isEmpty()) {
+            log.warn("Malformed bookings detected with null resource reference: {}", malformedIds);
+        }
+
+        List<BookingResponse> responses = bookings
                 .stream()
                 .map(bookingMapper::toResponse)
                 .collect(Collectors.toList());
+        log.info("getAllBookings returned {} records", responses.size());
+        return responses;
     }
 
     @Override
@@ -87,5 +108,24 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking not found: " + bookingId);
         }
         bookingRepository.deleteById(bookingId);
+    }
+
+    @Override
+    public List<String> findMalformedBookingIds() {
+        return bookingRepository.findAll().stream()
+                .filter(booking -> booking.getResource() == null)
+                .map(Booking::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    @Override
+    public int deleteMalformedBookings() {
+        List<String> malformedIds = findMalformedBookingIds();
+        if (!malformedIds.isEmpty()) {
+            bookingRepository.deleteAllById(malformedIds);
+            log.warn("Deleted malformed bookings with null resource reference: {}", malformedIds);
+        }
+        return malformedIds.size();
     }
 }

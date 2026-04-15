@@ -10,4 +10,5 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
     List<Booking> findByUser_Id(String userId);
     long countByStatus(BookingStatus status);
     List<Booking> findTop5ByStatusOrderByCreatedAtDesc(BookingStatus status);
+    List<Booking> findByResourceIsNull();
 }
