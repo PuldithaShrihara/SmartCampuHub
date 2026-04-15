@@ -2,12 +2,17 @@
 import BookingForm from '../../components/booking/BookingForm.jsx'
 import Modal from '../../components/common/Modal.jsx'
 import { createBooking, getMyBookings } from '../../api/bookingApi.js'
+import { fetchResources } from '../../api/resourceApi.js'
 
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [resources, setResources] = useState([])
+  const [resourcesLoading, setResourcesLoading] = useState(false)
+  const [resourcesError, setResourcesError] = useState('')
+  const [submittingBooking, setSubmittingBooking] = useState(false)
 
   async function fetchBookings() {
     try {
@@ -27,14 +32,50 @@ export default function MyBookingsPage() {
     fetchBookings()
   }, [])
 
+  useEffect(() => {
+    if (!showCreateForm) return
+
+    let cancelled = false
+    async function loadResourcesForBooking() {
+      setResourcesLoading(true)
+      setResourcesError('')
+      try {
+        const data = await fetchResources()
+        const normalized = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.content)
+            ? data.content
+            : []
+        if (!cancelled) {
+          setResources(normalized.filter((resource) => resource && resource.id))
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setResources([])
+          setResourcesError(err?.message || 'Failed to load resources')
+        }
+      } finally {
+        if (!cancelled) setResourcesLoading(false)
+      }
+    }
+
+    loadResourcesForBooking()
+    return () => {
+      cancelled = true
+    }
+  }, [showCreateForm])
+
   async function handleDraftSubmit(data) {
     try {
+      setSubmittingBooking(true)
       await createBooking(data)
       alert('Booking submitted successfully!')
       setShowCreateForm(false)
       fetchBookings() // Refresh the list
     } catch (err) {
       alert('Failed to submit booking: ' + err.message)
+    } finally {
+      setSubmittingBooking(false)
     }
   }
 
@@ -62,7 +103,21 @@ export default function MyBookingsPage() {
           onClose={() => setShowCreateForm(false)}
           title="Create New Booking"
         >
-          <BookingForm onSubmit={handleDraftSubmit} />
+          {resourcesLoading ? (
+            <p>Loading available resources...</p>
+          ) : resourcesError ? (
+            <div className="dash-msg error">{resourcesError}</div>
+          ) : resources.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)' }}>
+              No resources available. Please ask admin to add resources first.
+            </p>
+          ) : (
+            <BookingForm
+              onSubmit={handleDraftSubmit}
+              resources={resources}
+              submitting={submittingBooking}
+            />
+          )}
         </Modal>
 
         <div style={{ marginTop: 32 }}>
@@ -83,6 +138,7 @@ export default function MyBookingsPage() {
                 <thead>
                   <tr>
                     <th>Resource</th>
+                    <th>Type</th>
                     <th>Date</th>
                     <th>Time</th>
                     <th>Status</th>
@@ -95,6 +151,7 @@ export default function MyBookingsPage() {
                         <div className="res-name">{b.resourceName || 'Unknown Resource'}</div>
                         <div className="res-id">{b.resourceId}</div>
                       </td>
+                      <td>{String(b.resourceType || 'UNKNOWN').replace(/_/g, ' ')}</td>
                       <td>{b.bookingDate}</td>
                       <td>{b.startTime} - {b.endTime}</td>
                       <td>

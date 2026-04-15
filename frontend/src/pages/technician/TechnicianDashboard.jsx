@@ -93,15 +93,15 @@ export default function TechnicianDashboard() {
         />
         <div className="dashboard-content">
           <Routes>
-            <Route path="/" element={<TechnicianHome />} />
-            <Route path="/tickets" element={<TechnicianTicketsPage />} />
-            <Route path="/calendar" element={<TechnicianCalendarPage />} />
-            <Route path="/resources" element={<TechnicianResourcesPage />} />
+            <Route index element={<TechnicianHome />} />
+            <Route path="tickets" element={<TechnicianTicketsPage />} />
+            <Route path="calendar" element={<TechnicianCalendarPage />} />
+            <Route path="resources" element={<TechnicianResourcesPage />} />
             <Route
-              path="/notifications"
+              path="notifications"
               element={<TechnicianNotificationsPage />}
             />
-            <Route path="/settings" element={<TechnicianSettingsPage />} />
+            <Route path="settings" element={<TechnicianSettingsPage />} />
             <Route path="*" element={<Navigate to="/technician" replace />} />
           </Routes>
         </div>

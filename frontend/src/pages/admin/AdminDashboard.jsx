@@ -83,15 +83,15 @@ export default function AdminDashboard() {
         />
         <div className="dashboard-content">
           <Routes>
-            <Route path="/" element={<AdminHome />} />
-            <Route path="/all-bookings" element={<AllBookingsPage />} />
-            <Route path="/resources" element={<ResourcesPage />} />
-            <Route path="/tickets" element={<TicketsPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/statistics" element={<StatisticsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/analysis/:venueId" element={<VenueAnalysisPage />} />
+            <Route index element={<AdminHome />} />
+            <Route path="all-bookings" element={<AllBookingsPage />} />
+            <Route path="resources" element={<ResourcesPage />} />
+            <Route path="tickets" element={<TicketsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="statistics" element={<StatisticsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="analysis/:venueId" element={<VenueAnalysisPage />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </div>

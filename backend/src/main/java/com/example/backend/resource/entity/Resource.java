@@ -16,12 +16,6 @@ public class Resource {
 	private ResourceStatus status;
 	private String photoUrl;
 
-	private String name;
-
-	private String location;
-
-	private Integer capacity;
-
 	public String getId() {
 		return id;
 	}

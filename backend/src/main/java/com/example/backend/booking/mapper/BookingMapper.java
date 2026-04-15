@@ -30,6 +30,7 @@ public class BookingMapper {
                 booking.getId(),
                 booking.getResource().getId(),
                 booking.getResource().getName(),
+                booking.getResource().getType() != null ? booking.getResource().getType().name() : null,
                 booking.getUser().getId(),
                 booking.getUser().getFullName(),
                 booking.getBookingDate(),

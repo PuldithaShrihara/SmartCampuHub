@@ -34,9 +34,15 @@ export default function ResourcesPage() {
   const loadResources = React.useCallback(async () => {
     try {
       const data = await fetchResources(filters)
-      setResources(data)
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.content)
+          ? data.content
+          : []
+      setResources(normalized.filter(Boolean))
     } catch {
       showToast('Failed to load resources', 'error')
+      setResources([])
     }
   }, [filters, showToast])
 
@@ -57,12 +63,14 @@ export default function ResourcesPage() {
     if (resource) {
       setEditingResource(resource)
       setFormData({
-        name: resource.name,
-        type: resource.type,
-        capacity: resource.capacity,
-        location: resource.location,
-        availabilityWindows: resource.availabilityWindows ? resource.availabilityWindows.join(', ') : '',
-        status: resource.status,
+        name: resource.name || '',
+        type: resource.type || 'LECTURE_HALL',
+        capacity: resource.capacity ?? '',
+        location: resource.location || '',
+        availabilityWindows: Array.isArray(resource.availabilityWindows)
+          ? resource.availabilityWindows.join(', ')
+          : '',
+        status: resource.status || 'ACTIVE',
         photoUrl: resource.photoUrl || ''
       })
     } else {
@@ -213,22 +221,22 @@ export default function ResourcesPage() {
             </tr>
           </thead>
           <tbody>
-            {resources.map(res => (
-              <tr key={res.id}>
+            {resources.map((res, idx) => (
+              <tr key={res.id || `${res.name || 'resource'}-${idx}`}>
                 <td>
                   <img 
                     src={res.photoUrl || 'https://placehold.co/100x100?text=No+Photo'} 
-                    alt={res.name} 
+                    alt={res.name || 'Resource'} 
                     className="resource-thumbnail" 
                   />
                 </td>
-                <td style={{ fontWeight: 600 }}>{res.name}</td>
-                <td>{res.type.replace('_', ' ')}</td>
-                <td>{res.capacity}</td>
-                <td>{res.location}</td>
+                <td style={{ fontWeight: 600 }}>{res.name || 'Unnamed Resource'}</td>
+                <td>{String(res.type || 'UNKNOWN').replace(/_/g, ' ')}</td>
+                <td>{res.capacity ?? '-'}</td>
+                <td>{res.location || '-'}</td>
                 <td>
-                  <span className={`status-badge ${res.status.toLowerCase()}`}>
-                    {res.status.replace(/_/g, ' ')}
+                  <span className={`status-badge ${String(res.status || 'unknown').toLowerCase().replace(/_/g, '')}`}>
+                    {String(res.status || 'UNKNOWN').replace(/_/g, ' ')}
                   </span>
                 </td>
                 <td className="action-buttons">

@@ -10,6 +10,7 @@ public record BookingResponse(
 	String id,
 	String resourceId,
 	String resourceName,
+	String resourceType,
 	String userId,
 	String userName,
 	LocalDate bookingDate,
