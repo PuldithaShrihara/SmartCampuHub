@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ResourceRepository extends MongoRepository<Resource, String> {
-
+    boolean existsByLocationIgnoreCase(String location);
+    boolean existsByLocationIgnoreCaseAndIdNot(String location, String id);
 }

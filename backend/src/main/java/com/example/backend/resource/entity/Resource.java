@@ -1,6 +1,7 @@
 package com.example.backend.resource.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "resources")
@@ -11,6 +12,7 @@ public class Resource {
 	private String name;
 	private ResourceType type;
 	private Integer capacity;
+	@Indexed(unique = true)
 	private String location;
 	private java.util.List<String> availabilityWindows;
 	private ResourceStatus status;

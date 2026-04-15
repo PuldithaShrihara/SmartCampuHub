@@ -30,6 +30,7 @@ export default function ResourcesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingResource, setEditingResource] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
+  const [resourceFormCategory, setResourceFormCategory] = useState(null)
   
   const [formData, setFormData] = useState({
     name: '',
@@ -40,6 +41,64 @@ export default function ResourcesPage() {
     status: 'ACTIVE',
     photoUrl: ''
   })
+  const isEquipmentForm =
+    resourceFormCategory === 'EQUIPMENT' || formData.type === 'EQUIPMENT'
+  const parseAvailabilityWindowsInput = (value) => {
+    return value
+      .split(',')
+      .map((slot) => slot.trim())
+      .filter(Boolean)
+  }
+  const isValidTimeRange = (slot) => /^\d{2}:\d{2}-\d{2}:\d{2}$/.test(slot)
+  const formErrors = React.useMemo(() => {
+    const errors = {}
+    const name = formData.name.trim()
+    const location = formData.location.trim()
+    const windows = parseAvailabilityWindowsInput(formData.availabilityWindows)
+    const duplicateLocation = resources.some((resource) => {
+      const resourceLocation = typeof resource.location === 'string' ? resource.location.trim() : ''
+      if (!resourceLocation) return false
+      if (editingResource?.id && resource.id === editingResource.id) return false
+      return resourceLocation.toUpperCase() === location.toUpperCase()
+    })
+
+    if (!name) {
+      errors.name = isEquipmentForm ? 'Equipment name is required.' : 'Resource name is required.'
+    } else if (name.length < 3) {
+      errors.name = 'Name must be at least 3 characters.'
+    }
+
+    if (!isEquipmentForm) {
+      const capacity = parseInt(formData.capacity, 10)
+      if (formData.capacity === '') {
+        errors.capacity = 'Capacity is required.'
+      } else if (Number.isNaN(capacity) || capacity < 1) {
+        errors.capacity = 'Capacity must be at least 1.'
+      }
+      if (!['LECTURE_HALL', 'LAB', 'MEETING_ROOM'].includes(formData.type)) {
+        errors.type = 'Please select a valid type.'
+      }
+    }
+
+    if (!location) {
+      errors.location = isEquipmentForm ? 'Storage location is required.' : 'Location is required.'
+    } else if (duplicateLocation) {
+      errors.location = `Location already exists (${location.toUpperCase()}).`
+    }
+
+    if (windows.length === 0) {
+      errors.availabilityWindows = 'At least one availability window is required.'
+    } else if (windows.some((slot) => !isValidTimeRange(slot))) {
+      errors.availabilityWindows = 'Use HH:MM-HH:MM format, separated by commas.'
+    }
+
+    if (!['ACTIVE', 'OUT_OF_SERVICE', 'UNDER_MAINTENANCE'].includes(formData.status)) {
+      errors.status = 'Please select a valid status.'
+    }
+
+    return errors
+  }, [formData, isEquipmentForm, resources, editingResource])
+  const isFormValid = Object.keys(formErrors).length === 0
 
   const loadResources = React.useCallback(async () => {
     try {
@@ -67,6 +126,7 @@ export default function ResourcesPage() {
     setPhotoFile(null)
     if (resource) {
       setEditingResource(resource)
+      setResourceFormCategory(resource.type === 'EQUIPMENT' ? 'EQUIPMENT' : 'SPACE')
       setFormData({
         name: resource.name,
         type: resource.type,
@@ -78,6 +138,7 @@ export default function ResourcesPage() {
       })
     } else {
       setEditingResource(null)
+      setResourceFormCategory(null)
       setFormData({
         name: '',
         type: 'LECTURE_HALL',
@@ -93,10 +154,35 @@ export default function ResourcesPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
+    setResourceFormCategory(null)
+  }
+
+  const handleCategorySelect = (category) => {
+    setResourceFormCategory(category)
+    setFormData((prev) => ({
+      ...prev,
+      type: category === 'EQUIPMENT' ? 'EQUIPMENT' : 'LECTURE_HALL',
+      name: '',
+      capacity: '',
+      location: '',
+      availabilityWindows: '',
+      status: 'ACTIVE',
+      photoUrl: '',
+    }))
+    setPhotoFile(null)
   }
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    setFormData((prev) => {
+      if (name === 'type') {
+        if (value === 'LAB' && (prev.capacity === '' || prev.capacity === null)) {
+          return { ...prev, type: value, capacity: '60' }
+        }
+        return { ...prev, type: value }
+      }
+      return { ...prev, [name]: value }
+    })
   }
 
   const handleFileChange = (e) => {
@@ -107,11 +193,19 @@ export default function ResourcesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!isFormValid) {
+      showToast('Please fix the validation errors before saving.', 'error')
+      return
+    }
     try {
+      const normalizedCapacity =
+        formData.capacity === '' || Number.isNaN(parseInt(formData.capacity, 10))
+          ? null
+          : parseInt(formData.capacity, 10)
       const payload = {
         ...formData,
-        capacity: parseInt(formData.capacity, 10),
-        availabilityWindows: formData.availabilityWindows.split(',').map(s => s.trim()).filter(Boolean)
+        capacity: normalizedCapacity,
+        availabilityWindows: parseAvailabilityWindowsInput(formData.availabilityWindows)
       }
       
       if (editingResource) {
@@ -274,11 +368,44 @@ export default function ResourcesPage() {
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>{editingResource ? 'Edit Resource' : 'Add New Resource'}</h2>
-            <form onSubmit={handleSubmit}>
+            <h2 className="modal-title">{editingResource ? 'Edit Resource' : 'Add New Resource'}</h2>
+            <p className="modal-subtitle">
+              {editingResource
+                ? 'Update resource details and availability.'
+                : 'Create a new resource by selecting a category and filling the form.'}
+            </p>
+            {!editingResource && !resourceFormCategory ? (
+              <div className="resource-category-picker">
+                <button
+                  type="button"
+                  className="resource-category-card"
+                  onClick={() => handleCategorySelect('EQUIPMENT')}
+                >
+                  <strong>EQUIPMENT</strong>
+                  <span>Cameras, tools, devices and other assets</span>
+                </button>
+                <button
+                  type="button"
+                  className="resource-category-card"
+                  onClick={() => handleCategorySelect('SPACE')}
+                >
+                  <strong>LABS / LECTURE HALLS</strong>
+                  <span>Bookable spaces for classes and practicals</span>
+                </button>
+              </div>
+            ) : (
+            <form className="resource-form" onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Resource Name</label>
-                <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Auditorium A" />
+                <label>{isEquipmentForm ? 'Equipment Name' : 'Resource Name'}</label>
+                <input
+                  required
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className={formErrors.name ? 'input-error' : ''}
+                  placeholder={isEquipmentForm ? 'e.g. DSLR Camera' : 'e.g. Auditorium A'}
+                />
+                {formErrors.name && <p className="field-error">{formErrors.name}</p>}
               </div>
               <div className="form-group">
                 <label>Photo</label>
@@ -289,24 +416,58 @@ export default function ResourcesPage() {
               </div>
               <div className="form-group">
                 <label>Type</label>
-                <select name="type" value={formData.type} onChange={handleChange}>
-                  <option value="LECTURE_HALL">Lecture Hall</option>
-                  <option value="LAB">Lab</option>
-                  <option value="MEETING_ROOM">Meeting Room</option>
-                  <option value="EQUIPMENT">Equipment</option>
-                </select>
+                {isEquipmentForm ? (
+                  <input className="readonly-input" value="Equipment" readOnly />
+                ) : (
+                  <select name="type" value={formData.type} onChange={handleChange}>
+                    <option value="LECTURE_HALL">Lecture Hall</option>
+                    <option value="LAB">Lab</option>
+                    <option value="MEETING_ROOM">Meeting Room</option>
+                  </select>
+                )}
+                {formErrors.type && <p className="field-error">{formErrors.type}</p>}
+              </div>
+              {!isEquipmentForm && (
+                <div className="form-group">
+                  <label>Capacity</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    name="capacity"
+                    value={formData.capacity}
+                    onChange={handleChange}
+                    className={formErrors.capacity ? 'input-error' : ''}
+                    placeholder="e.g. 150"
+                  />
+                  {formErrors.capacity && <p className="field-error">{formErrors.capacity}</p>}
+                </div>
+              )}
+              <div className="form-group">
+                <label>{isEquipmentForm ? 'Storage Location' : 'Location'}</label>
+                <input
+                  required
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  className={formErrors.location ? 'input-error' : ''}
+                  placeholder={isEquipmentForm ? 'e.g. Media Room, Rack B2' : 'e.g. Building 1, Floor 2'}
+                />
+                {formErrors.location && <p className="field-error">{formErrors.location}</p>}
               </div>
               <div className="form-group">
-                <label>Capacity</label>
-                <input required type="number" min="1" name="capacity" value={formData.capacity} onChange={handleChange} placeholder="e.g. 150" />
-              </div>
-              <div className="form-group">
-                <label>Location</label>
-                <input required name="location" value={formData.location} onChange={handleChange} placeholder="e.g. Building 1, Floor 2" />
-              </div>
-              <div className="form-group">
-                <label>Availability Windows (comma separated)</label>
-                <input name="availabilityWindows" value={formData.availabilityWindows} onChange={handleChange} placeholder="e.g. 08:00-12:00, 13:00-17:00" />
+                <label>{isEquipmentForm ? 'Available Time (comma separated)' : 'Availability Windows (comma separated)'}</label>
+                <input
+                  required
+                  name="availabilityWindows"
+                  value={formData.availabilityWindows}
+                  onChange={handleChange}
+                  className={formErrors.availabilityWindows ? 'input-error' : ''}
+                  placeholder={isEquipmentForm ? 'e.g. 09:00-11:00, 14:00-16:00' : 'e.g. 08:00-12:00, 13:00-17:00'}
+                />
+                {formErrors.availabilityWindows && (
+                  <p className="field-error">{formErrors.availabilityWindows}</p>
+                )}
               </div>
               <div className="form-group">
                 <label>Status</label>
@@ -315,13 +476,26 @@ export default function ResourcesPage() {
                   <option value="OUT_OF_SERVICE">Out of Service</option>
                   <option value="UNDER_MAINTENANCE">Under Maintenance</option>
                 </select>
+                {formErrors.status && <p className="field-error">{formErrors.status}</p>}
               </div>
 
               <div className="modal-actions">
+                {!editingResource && (
+                  <button
+                    type="button"
+                    className="btn-back"
+                    onClick={() => setResourceFormCategory(null)}
+                  >
+                    Back
+                  </button>
+                )}
                 <button type="button" className="btn-cancel" onClick={handleCloseModal}>Cancel</button>
-                <button type="submit" className="btn-save">Save Resource</button>
+                <button type="submit" className="btn-save" disabled={!isFormValid}>
+                  Save Resource
+                </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
