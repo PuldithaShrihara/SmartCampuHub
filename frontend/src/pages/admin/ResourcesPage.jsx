@@ -18,6 +18,12 @@ export default function ResourcesPage() {
   const formatStatus = (status) => (typeof status === 'string' ? status.replace(/_/g, ' ') : 'UNKNOWN')
   const statusClass = (status) =>
     typeof status === 'string' ? status.toLowerCase() : 'unknown'
+  const formatAvailabilityWindows = (availabilityWindows) => {
+    if (!Array.isArray(availabilityWindows) || availabilityWindows.length === 0) {
+      return []
+    }
+    return availabilityWindows.filter((window) => typeof window === 'string' && window.trim() !== '')
+  }
   
   const [resources, setResources] = useState([])
   const [filters, setFilters] = useState({ type: '', capacity: '', location: '' })
@@ -204,57 +210,65 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      <div className="resources-table-container">
-        <table className="resources-table">
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Capacity</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {resources.map(res => (
-              <tr key={res.id}>
-                <td>
-                  <img 
-                    src={res.photoUrl || 'https://placehold.co/100x100?text=No+Photo'} 
-                    alt={res.name} 
-                    className="resource-thumbnail" 
+      <div className="resources-cards-container">
+        {resources.length === 0 ? (
+          <div className="resources-empty-state">
+            No resources found. Try adjusting your filters or add a new resource.
+          </div>
+        ) : (
+          <div className="resources-cards-grid">
+            {resources.map((res) => (
+              <article key={res.id} className="resource-card">
+                <div className="resource-card-image-wrap">
+                  <img
+                    src={res.photoUrl || 'https://placehold.co/600x400?text=No+Photo'}
+                    alt={res.name || 'Resource image'}
+                    className="resource-thumbnail"
                   />
-                </td>
-                <td style={{ fontWeight: 600 }}>{res.name}</td>
-                <td>{formatType(res.type)}</td>
-                <td>{res.capacity}</td>
-                <td>{res.location}</td>
-                <td>
                   <span className={`status-badge ${statusClass(res.status)}`}>
                     {formatStatus(res.status)}
                   </span>
-                </td>
-                <td className="action-buttons">
-                  <button className="btn-icon edit" onClick={() => handleOpenModal(res)}>
-                    <FaEdit />
-                  </button>
-                  <button className="btn-icon delete" onClick={() => handleDelete(res.id)}>
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
+                </div>
+                <div className="resource-card-body">
+                  <h3 className="resource-card-title">{res.name || 'Untitled Resource'}</h3>
+                  <p className="resource-card-type">{formatType(res.type)}</p>
+                  <div className="resource-card-details">
+                    <div className="resource-card-detail">
+                      <span>Capacity</span>
+                      <strong>{res.capacity ?? 'N/A'}</strong>
+                    </div>
+                    <div className="resource-card-detail">
+                      <span>Location</span>
+                      <strong>{res.location || 'N/A'}</strong>
+                    </div>
+                  </div>
+                  <div className="resource-card-availability">
+                    <span className="availability-label">Availability</span>
+                    {formatAvailabilityWindows(res.availabilityWindows).length > 0 ? (
+                      <div className="availability-chips">
+                        {formatAvailabilityWindows(res.availabilityWindows).map((window, idx) => (
+                          <span key={`${res.id}-availability-${idx}`} className="availability-chip">
+                            {window}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="availability-empty">No availability windows set</p>
+                    )}
+                  </div>
+                  <div className="action-buttons">
+                    <button className="btn-icon edit" onClick={() => handleOpenModal(res)}>
+                      <FaEdit />
+                    </button>
+                    <button className="btn-icon delete" onClick={() => handleDelete(res.id)}>
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              </article>
             ))}
-            {resources.length === 0 && (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-                  No resources found. Try adjusting your filters or add a new resource.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
