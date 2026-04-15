@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createIncident, getMyIncidents } from '../../api/incidentApi.js'
+import '../../styles/IncidentPage.css'
 
 export default function StudentIncidentsPage() {
   const [title, setTitle] = useState('')
@@ -10,6 +11,16 @@ export default function StudentIncidentsPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [incidents, setIncidents] = useState([])
+
+  const pendingCount = incidents.filter((item) => item.status === 'Pending').length
+  const inProgressCount = incidents.filter((item) => item.status === 'In Progress').length
+  const resolvedCount = incidents.filter((item) => item.status === 'Resolved').length
+
+  function statusClass(status) {
+    if (status === 'Resolved') return 'inc-status resolved'
+    if (status === 'In Progress') return 'inc-status progress'
+    return 'inc-status pending'
+  }
 
   async function loadMyIncidents() {
     try {
@@ -50,46 +61,66 @@ export default function StudentIncidentsPage() {
   }
 
   return (
-    <>
-      <section className="dash-card">
-        <h2>Report Incident</h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Create and track incidents related to resources.
-        </p>
+    <div className="incident-page">
+      <section className="dash-card inc-hero">
+        <div>
+          <h2>Incident Center</h2>
+          <p>Submit issues quickly and track technician progress in real time.</p>
+        </div>
+        <div className="inc-stats">
+          <div className="inc-stat">
+            <span>Total</span>
+            <strong>{incidents.length}</strong>
+          </div>
+          <div className="inc-stat">
+            <span>Pending</span>
+            <strong>{pendingCount}</strong>
+          </div>
+          <div className="inc-stat">
+            <span>In Progress</span>
+            <strong>{inProgressCount}</strong>
+          </div>
+          <div className="inc-stat">
+            <span>Resolved</span>
+            <strong>{resolvedCount}</strong>
+          </div>
+        </div>
       </section>
 
-      <section className="dash-card">
+      <section className="dash-card inc-form-card">
+        <div className="inc-section-head">
+          <h3>Report New Incident</h3>
+          <p>Add clear details so technicians can resolve it faster.</p>
+        </div>
+
         {message ? <div className="dash-msg success">{message}</div> : null}
         {error ? <div className="dash-msg error">{error}</div> : null}
 
-        <form className="dash-form-grid" onSubmit={handleSubmit}>
-          <div>
+        <form className="dash-form-grid inc-form-grid" onSubmit={handleSubmit}>
+          <div className="inc-field">
             <label htmlFor="incident-title">Title</label>
             <input
               id="incident-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Projector not working in hall"
               required
             />
           </div>
-          <div>
+
+          <div className="inc-field">
             <label htmlFor="incident-description">Description</label>
             <textarea
               id="incident-description"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe what happened and when it was observed."
               required
-              style={{
-                width: '100%',
-                maxWidth: 500,
-                padding: '10px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-              }}
             />
           </div>
-          <div>
+
+          <div className="inc-field">
             <label htmlFor="incident-resource">Resource ID</label>
             <input
               id="incident-resource"
@@ -99,7 +130,8 @@ export default function StudentIncidentsPage() {
               required
             />
           </div>
-          <div>
+
+          <div className="inc-field">
             <label htmlFor="incident-file">Attachment (optional)</label>
             <input
               id="incident-file"
@@ -108,36 +140,47 @@ export default function StudentIncidentsPage() {
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </div>
-          <button type="submit" disabled={loading}>
+
+          <button className="inc-submit-btn" type="submit" disabled={loading}>
             {loading ? 'Submitting...' : 'Submit Incident'}
           </button>
         </form>
       </section>
 
-      <section className="dash-card">
-        <h2>My Incidents</h2>
+      <section className="dash-card inc-list-card">
+        <div className="inc-section-head">
+          <h3>My Incidents</h3>
+          <p>Latest first. Check current status and technician remarks.</p>
+        </div>
+
         <div className="dash-table-wrap">
-          <table className="dash-table">
+          <table className="dash-table inc-table">
             <thead>
               <tr>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Resource</th>
                 <th>Remarks</th>
+                <th>Created</th>
               </tr>
             </thead>
             <tbody>
               {incidents.length === 0 ? (
                 <tr>
-                  <td colSpan={4}>No incidents yet.</td>
+                  <td colSpan={5} className="inc-empty">
+                    No incidents yet.
+                  </td>
                 </tr>
               ) : (
                 incidents.map((item) => (
                   <tr key={item.id}>
                     <td>{item.title}</td>
-                    <td>{item.status}</td>
+                    <td>
+                      <span className={statusClass(item.status)}>{item.status}</span>
+                    </td>
                     <td>{item.resourceId?.name || item.resourceId || '-'}</td>
                     <td>{item.technicianRemarks || '-'}</td>
+                    <td>{new Date(item.createdAt).toLocaleString()}</td>
                   </tr>
                 ))
               )}
@@ -145,6 +188,6 @@ export default function StudentIncidentsPage() {
           </table>
         </div>
       </section>
-    </>
+    </div>
   )
 }
