@@ -5,6 +5,7 @@ import {
   FaBuilding,
   FaCalendar,
   FaCog,
+  FaExclamationTriangle,
   FaHome,
   FaPlus,
   FaThLarge,
@@ -21,6 +22,7 @@ import MyBookingsPage from './MyBookingsPage.jsx'
 import BookingGridViewPage from './BookingGridViewPage.jsx'
 import StudentNotificationsPage from './StudentNotificationsPage.jsx'
 import StudentSettingsPage from './StudentSettingsPage.jsx'
+import StudentIncidentsPage from './StudentIncidentsPage.jsx'
 import '../../styles/StudentDashboard.css'
 
 export default function StudentDashboard() {
@@ -32,6 +34,7 @@ export default function StudentDashboard() {
     { label: 'Dashboard', icon: FaHome, path: '/student', end: true },
     { label: 'Browse Resources', icon: FaBuilding, path: '/student/resources' },
     { label: 'My Bookings', icon: FaCalendar, path: '/student/bookings' },
+    { label: 'Incidents', icon: FaExclamationTriangle, path: '/student/incidents' },
     {
       label: 'Booking Grid View',
       icon: FaThLarge,
@@ -88,6 +91,7 @@ export default function StudentDashboard() {
             <Route path="/bookings/create" element={<CreateBookingPage />} />
             <Route path="/bookings" element={<MyBookingsPage />} />
             <Route path="/bookings/grid" element={<BookingGridViewPage />} />
+            <Route path="/incidents" element={<StudentIncidentsPage />} />
             <Route
               path="/notifications"
               element={<StudentNotificationsPage />}
