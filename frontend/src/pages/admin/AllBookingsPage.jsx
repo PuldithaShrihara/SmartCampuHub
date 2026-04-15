@@ -5,6 +5,7 @@ export default function AllBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     async function loadBookings() {
@@ -20,6 +21,27 @@ export default function AllBookingsPage() {
     loadBookings()
   }, [])
 
+  const normalizedSearch = searchTerm.trim().toLowerCase()
+  const filteredBookings = bookings.filter((booking) => {
+    if (!normalizedSearch) return true
+
+    const haystack = [
+      booking.userName,
+      booking.userId,
+      booking.resourceName,
+      booking.resourceId,
+      booking.status,
+      booking.bookingDate,
+      booking.startTime,
+      booking.endTime,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(normalizedSearch)
+  })
+
   return (
     <>
       <section className="dash-card">
@@ -31,11 +53,27 @@ export default function AllBookingsPage() {
 
       <section className="dash-card">
         <h3 style={{ marginBottom: 12 }}>Booking Records</h3>
+        <div style={{ marginBottom: 16 }}>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by student, resource, date, or status..."
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              padding: '10px 12px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: '#fff',
+            }}
+          />
+        </div>
         {loading ? (
           <p>Loading bookings...</p>
         ) : error ? (
           <div className="dash-msg error">{error}</div>
-        ) : bookings.length === 0 ? (
+        ) : filteredBookings.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>No bookings found.</p>
         ) : (
           <div className="dash-table-wrap">
@@ -49,7 +87,7 @@ export default function AllBookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b) => (
+                {filteredBookings.map((b) => (
                   <tr key={b.id}>
                     <td>
                       <div className="res-name">{b.userName}</div>
