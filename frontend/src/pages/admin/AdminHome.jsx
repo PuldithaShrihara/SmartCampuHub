@@ -5,14 +5,12 @@ import {
   FaCalendarCheck, 
   FaUserCheck, 
   FaUsers, 
-  FaArrowRight,
   FaPlusCircle,
   FaTicketAlt,
-  FaCog,
-  FaClock
+  FaCog
 } from 'react-icons/fa'
 import { useAuth } from '../../context/useAuth.js'
-import { fetchDashboardStats, fetchRecentPendingBookings } from '../../api/dashboardApi.js'
+import { fetchDashboardStats } from '../../api/dashboardApi.js'
 import './AdminHome.css'
 
 function StatCard({ label, value, icon: Icon, colorClass }) {
@@ -37,18 +35,13 @@ export default function AdminHome() {
     pendingApprovals: 0,
     totalUsers: 0
   })
-  const [recentBookings, setRecentBookings] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [statsData, bookingsData] = await Promise.all([
-          fetchDashboardStats(),
-          fetchRecentPendingBookings()
-        ])
+        const statsData = await fetchDashboardStats()
         setStats(statsData)
-        setRecentBookings(bookingsData)
       } catch (err) {
         console.error('Failed to load dashboard data', err)
       } finally {
@@ -105,62 +98,6 @@ export default function AdminHome() {
       </section>
 
       <div className="dashboard-sections">
-        <section className="content-section">
-          <div className="section-header">
-            <h2>Recent Pending Bookings</h2>
-            <Link to="/admin/pending-bookings" className="view-all">
-              View All <FaArrowRight style={{ fontSize: '0.75rem' }} />
-            </Link>
-          </div>
-          
-          <div className="dash-table-wrap">
-            <table className="recent-table">
-              <thead>
-                <tr>
-                  <th>Resource</th>
-                  <th>Student Info</th>
-                  <th>Schedule</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBookings.map((booking) => (
-                  <tr key={booking.id}>
-                    <td style={{ fontWeight: 700, color: '#1e293b' }}>
-                      {booking.resource?.name || 'Deleted Resource'}
-                    </td>
-                    <td>
-                      <div className="student-info">
-                        <span className="student-name">{booking.user?.fullName}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{booking.user?.email}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="booking-meta">
-                        <FaClock style={{ fontSize: '0.8rem' }} />
-                        {booking.bookingDate} | {booking.startTime}-{booking.endTime}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-approve">Approve</button>
-                        <button className="btn-reject">Reject</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {recentBookings.length === 0 && (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                      No pending bookings at the moment.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
         <section className="content-section">
           <div className="section-header">
             <h2>Quick Actions</h2>

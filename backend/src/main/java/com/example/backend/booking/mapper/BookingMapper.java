@@ -26,13 +26,16 @@ public class BookingMapper {
     }
 
     public BookingResponse toResponse(Booking booking) {
+        Resource resource = booking.getResource();
+        User user = booking.getUser();
+
         return new BookingResponse(
                 booking.getId(),
-                booking.getResource().getId(),
-                booking.getResource().getName(),
-                booking.getResource().getType() != null ? booking.getResource().getType().name() : null,
-                booking.getUser().getId(),
-                booking.getUser().getFullName(),
+                resource != null ? resource.getId() : null,
+                resource != null ? resource.getName() : "Deleted Resource",
+                (resource != null && resource.getType() != null) ? resource.getType().name() : null,
+                user != null ? user.getId() : null,
+                user != null ? user.getFullName() : "Deleted User",
                 booking.getBookingDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),

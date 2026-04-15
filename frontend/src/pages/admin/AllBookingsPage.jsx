@@ -9,6 +9,7 @@ export default function AllBookingsPage() {
   const [updatingId, setUpdatingId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [selectedStatus, setSelectedStatus] = useState('PENDING')
+  const [actionError, setActionError] = useState('')
 
   async function loadBookings() {
     try {
@@ -30,14 +31,19 @@ export default function AllBookingsPage() {
   async function handleStatusUpdate(bookingId, nextStatus) {
     try {
       setUpdatingId(bookingId)
+      setActionError('')
       let rejectionReason = ''
       if (nextStatus === 'REJECTED') {
         rejectionReason = window.prompt('Enter rejection reason:', 'Rejected by admin') || ''
       }
-      await updateBookingStatus(bookingId, nextStatus, rejectionReason)
-      await loadBookings()
+      const updated = await updateBookingStatus(bookingId, nextStatus, rejectionReason)
+      setBookings((prev) => prev.map((item) => (item.id === bookingId ? updated : item)))
+      return true
     } catch (err) {
-      window.alert(err.message || 'Failed to update booking status')
+      const message = err.message || 'Failed to update booking status'
+      setActionError(message)
+      window.alert(message)
+      return false
     } finally {
       setUpdatingId(null)
     }
@@ -49,16 +55,20 @@ export default function AllBookingsPage() {
 
     try {
       setUpdatingId(bookingId)
+      setActionError('')
       await deleteBooking(bookingId)
-      await loadBookings()
+      setBookings((prev) => prev.filter((item) => item.id !== bookingId))
     } catch (err) {
-      window.alert(err.message || 'Failed to delete booking')
+      const message = err.message || 'Failed to delete booking'
+      setActionError(message)
+      window.alert(message)
     } finally {
       setUpdatingId(null)
     }
   }
 
   function handleEditClick(booking) {
+    setActionError('')
     setEditingId(booking.id)
     setSelectedStatus(booking.status || 'PENDING')
   }
@@ -69,8 +79,10 @@ export default function AllBookingsPage() {
   }
 
   async function handleSaveEdit(bookingId) {
-    await handleStatusUpdate(bookingId, selectedStatus)
-    setEditingId(null)
+    const ok = await handleStatusUpdate(bookingId, selectedStatus)
+    if (ok) {
+      setEditingId(null)
+    }
   }
 
   const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -113,6 +125,7 @@ export default function AllBookingsPage() {
             }}
           />
         </div>
+        {actionError && <div className="dash-msg error">{actionError}</div>}
         {loading ? (
           <p>Loading bookings...</p>
         ) : error ? (
@@ -149,6 +162,7 @@ export default function AllBookingsPage() {
                     <td>
                       {editingId === b.id ? (
                         <select
+                          className="dash-inline-select"
                           value={selectedStatus}
                           onChange={(e) => setSelectedStatus(e.target.value)}
                           disabled={updatingId === b.id}
@@ -166,7 +180,7 @@ export default function AllBookingsPage() {
                     </td>
                     <td>
                       {editingId === b.id ? (
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div className="dash-actions-inline">
                           <button
                             type="button"
                             className="dash-btn-outline"
@@ -185,7 +199,7 @@ export default function AllBookingsPage() {
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div className="dash-actions-inline">
                           <button
                             type="button"
                             className="dash-btn-outline"

@@ -1,6 +1,7 @@
 package com.example.backend.booking.controller;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,5 +77,18 @@ public class BookingController {
     public ResponseEntity<Void> deleteBooking(@PathVariable String bookingId) {
         bookingService.deleteBooking(bookingId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/malformed")
+    public ResponseEntity<List<String>> listMalformedBookings() {
+        return ResponseEntity.ok(bookingService.findMalformedBookingIds());
+    }
+
+    @DeleteMapping("/malformed")
+    public ResponseEntity<Map<String, Object>> deleteMalformedBookings() {
+        int deleted = bookingService.deleteMalformedBookings();
+        return ResponseEntity.ok(Map.of(
+                "deletedCount", deleted,
+                "message", "Malformed bookings cleanup completed"));
     }
 }

@@ -17,4 +17,8 @@ public interface BookingService {
 
     void deleteBooking(String bookingId);
 
+    List<String> findMalformedBookingIds();
+
+    int deleteMalformedBookings();
+
 }
