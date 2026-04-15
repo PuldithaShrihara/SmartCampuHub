@@ -147,7 +147,7 @@ export default function SuperadminDashboard() {
                   maxLength={72}
                 />
               </div>
-              <button type="submit" disabled={saving}>
+              <button type="submit" className="dash-btn" disabled={saving}>
                 Create Admin
               </button>
             </form>
@@ -191,7 +191,7 @@ export default function SuperadminDashboard() {
                   maxLength={72}
                 />
               </div>
-              <button type="submit" disabled={saving}>
+              <button type="submit" className="dash-btn" disabled={saving}>
                 Create Technician
               </button>
             </form>
