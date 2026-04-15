@@ -1,4 +1,4 @@
-import { FaBell, FaSignOutAlt } from 'react-icons/fa'
+import { FaBell, FaSignOutAlt, FaBars } from 'react-icons/fa'
 import '../../styles/Header.css'
 
 export default function Header({
@@ -18,6 +18,9 @@ export default function Header({
   return (
     <header className="app-header">
       <div className="app-header-left">
+        <div className="hamburger-btn" style={{ marginRight: 20 }}>
+          <FaBars />
+        </div>
         <h1>{title || 'Smart Campus Hub'}</h1>
       </div>
       <div className="app-header-right">

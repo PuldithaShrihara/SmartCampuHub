@@ -31,11 +31,6 @@ export default function StudentDashboard() {
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/student', end: true },
     { label: 'Browse Resources', icon: FaBuilding, path: '/student/resources' },
-    {
-      label: 'Create Booking',
-      icon: FaPlus,
-      path: '/student/bookings/create',
-    },
     { label: 'My Bookings', icon: FaCalendar, path: '/student/bookings' },
     {
       label: 'Booking Grid View',

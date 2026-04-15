@@ -1,18 +1,22 @@
 ﻿:root {
-  --bg: #f3f5f9;
+  --bg: #f0f2ff;
+  /* Light lavender/periwinkle */
   --surface: #ffffff;
   --surface-muted: #f8fafc;
-  --text: #0f172a;
+  --text: #1e1b4b;
+  /* Dark navy/indigo */
   --text-muted: #64748b;
   --border: #e2e8f0;
-  --primary: #0b5ed7;
-  --primary-strong: #0a58ca;
-  --topbar: #1f2937;
-  --topbar-2: #111827;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --radius: 12px;
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --primary: #6366f1;
+  /* Indigo */
+  --primary-strong: #4f46e5;
+  --topbar: #1e1b4b;
+  --topbar-2: #312e81;
+  --danger: #ef4444;
+  --success: #10b981;
+  --radius: 24px;
+  /* More rounded as per template */
+  --shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
 }
 
 * {
