@@ -14,6 +14,10 @@ export default function ResourcesPage() {
   const showToast = React.useCallback((message, type='success') => {
     pushToast({ type, message })
   }, [pushToast])
+  const formatType = (type) => (typeof type === 'string' ? type.replace(/_/g, ' ') : 'N/A')
+  const formatStatus = (status) => (typeof status === 'string' ? status.replace(/_/g, ' ') : 'UNKNOWN')
+  const statusClass = (status) =>
+    typeof status === 'string' ? status.toLowerCase() : 'unknown'
   
   const [resources, setResources] = useState([])
   const [filters, setFilters] = useState({ type: '', capacity: '', location: '' })
@@ -34,8 +38,9 @@ export default function ResourcesPage() {
   const loadResources = React.useCallback(async () => {
     try {
       const data = await fetchResources(filters)
-      setResources(data)
+      setResources(Array.isArray(data) ? data : [])
     } catch {
+      setResources([])
       showToast('Failed to load resources', 'error')
     }
   }, [filters, showToast])
@@ -223,12 +228,12 @@ export default function ResourcesPage() {
                   />
                 </td>
                 <td style={{ fontWeight: 600 }}>{res.name}</td>
-                <td>{res.type.replace('_', ' ')}</td>
+                <td>{formatType(res.type)}</td>
                 <td>{res.capacity}</td>
                 <td>{res.location}</td>
                 <td>
-                  <span className={`status-badge ${res.status.toLowerCase()}`}>
-                    {res.status.replace(/_/g, ' ')}
+                  <span className={`status-badge ${statusClass(res.status)}`}>
+                    {formatStatus(res.status)}
                   </span>
                 </td>
                 <td className="action-buttons">
