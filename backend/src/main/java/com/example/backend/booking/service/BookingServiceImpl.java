@@ -37,9 +37,6 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse createBooking(BookingRequest request, String userEmail) {
-        log.info("createBooking request received: userEmail={}, resourceId={}, date={}, start={}, end={}",
-                userEmail, request.resourceId(), request.bookingDate(), request.startTime(), request.endTime());
-
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
@@ -48,9 +45,6 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingMapper.toEntity(request, user, resource);
         Booking savedBooking = bookingRepository.save(booking);
-        log.info("createBooking persisted successfully: bookingId={}, status={}",
-                savedBooking.getId(), savedBooking.getStatus());
-
         return bookingMapper.toResponse(savedBooking);
     }
 
@@ -81,7 +75,6 @@ public class BookingServiceImpl implements BookingService {
                 .stream()
                 .map(bookingMapper::toResponse)
                 .collect(Collectors.toList());
-        log.info("getAllBookings returned {} records", responses.size());
         return responses;
     }
 
