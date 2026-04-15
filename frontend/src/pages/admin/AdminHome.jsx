@@ -1,99 +1,189 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { 
+  FaBuilding, 
+  FaCalendarCheck, 
+  FaUserCheck, 
+  FaUsers, 
+  FaArrowRight,
+  FaPlusCircle,
+  FaTicketAlt,
+  FaCog,
+  FaClock
+} from 'react-icons/fa'
 import { useAuth } from '../../context/useAuth.js'
-import MainCalendar from '../../components/dashboard/MainCalendar'
-import '../../styles/DashboardRedesign.css'
+import { fetchDashboardStats, fetchRecentPendingBookings } from '../../api/dashboardApi.js'
+import './AdminHome.css'
 
-const venues = [
-  { id: 'lecture-hall-a', name: 'Lecture Hall A', capacity: 200, status: 'Busy' },
-  { id: 'lab-101', name: 'Lab 101', capacity: 30, status: 'Free' },
-  { id: 'seminar-room', name: 'Seminar Room', capacity: 50, status: 'Free' },
-  { id: 'auditorium', name: 'Auditorium', capacity: 500, status: 'Busy' },
-]
+function StatCard({ label, value, icon: Icon, colorClass }) {
+  return (
+    <div className="stat-card">
+      <div className={`stat-icon ${colorClass}`}>
+        <Icon />
+      </div>
+      <div className="stat-info">
+        <span className="stat-value">{value.toLocaleString()}</span>
+        <span className="stat-label">{label}</span>
+      </div>
+    </div>
+  )
+}
 
 export default function AdminHome() {
   const { user } = useAuth()
-  
+  const [stats, setStats] = useState({
+    totalResources: 0,
+    totalBookings: 0,
+    pendingApprovals: 0,
+    totalUsers: 0
+  })
+  const [recentBookings, setRecentBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        const [statsData, bookingsData] = await Promise.all([
+          fetchDashboardStats(),
+          fetchRecentPendingBookings()
+        ])
+        setStats(statsData)
+        setRecentBookings(bookingsData)
+      } catch (err) {
+        console.error('Failed to load dashboard data', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadDashboardData()
+  }, [])
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good Morning'
+    if (hour < 17) return 'Good Afternoon'
+    return 'Good Evening'
+  }
+
+  if (loading) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading dashboard...</div>
+  }
+
   return (
     <div className="admin-home">
-      {/* Premium Welcome Card */}
-      <div className="dash-card" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-        color: '#fff',
-        border: 'none',
-        padding: '30px'
-      }}>
-        <div>
-          <h2 style={{ color: '#fff', fontSize: '1.75rem' }}>Hello, {user?.fullName || 'Admin'}!</h2>
-          <p style={{ color: '#94a3b8', margin: '8px 0 0 0' }}>Welcome back to your Smart Campus dashboard.</p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>System Status</div>
-          <div style={{ fontWeight: 600, color: '#10b981' }}>● All systems operational</div>
-        </div>
-      </div>
+      <header className="welcome-banner">
+        <p>Member of Academic Staff</p>
+        <h1>{getGreeting()}, {user?.fullName?.split(' ')[0] || 'Admin'}</h1>
+        <p>Welcome back! Here's what's happening on campus today.</p>
+      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, marginTop: 24 }}>
-        {/* Main Content: Calendar */}
-        <div>
-          <MainCalendar />
-        </div>
+      <section className="stats-grid">
+        <StatCard 
+          label="Total Resources" 
+          value={stats.totalResources} 
+          icon={FaBuilding} 
+          colorClass="blue" 
+        />
+        <StatCard 
+          label="Total Bookings" 
+          value={stats.totalBookings} 
+          icon={FaCalendarCheck} 
+          colorClass="green" 
+        />
+        <StatCard 
+          label="Pending Approvals" 
+          value={stats.pendingApprovals} 
+          icon={FaUserCheck} 
+          colorClass="orange" 
+        />
+        <StatCard 
+          label="Total Users" 
+          value={stats.totalUsers} 
+          icon={FaUsers} 
+          colorClass="purple" 
+        />
+      </section>
 
-        {/* Sidebar: Venues Analyis Selection */}
-        <div className="dash-card">
-          <h3 style={{ marginBottom: 16 }}>Resource Venues</h3>
-          <p style={{ fontSize: 13, color: 'var(--cal-muted)', marginBottom: 20 }}>
-            Click on a venue to view its weekly analysis and occupancy data.
-          </p>
+      <div className="dashboard-sections">
+        <section className="content-section">
+          <div className="section-header">
+            <h2>Recent Pending Bookings</h2>
+            <Link to="/admin/pending-bookings" className="view-all">
+              View All <FaArrowRight style={{ fontSize: '0.75rem' }} />
+            </Link>
+          </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {venues.map(venue => (
-              <Link 
-                key={venue.id}
-                to={`/admin/analysis/${venue.id}`}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  border: '1px solid var(--cal-border)',
-                  background: '#fff',
-                  transition: 'all 0.2s'
-                }}
-                className="venue-item-link"
-              >
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--cal-text)' }}>{venue.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--cal-muted)' }}>Cap: {venue.capacity}</div>
-                </div>
-                <div style={{ 
-                  fontSize: 11, 
-                  fontWeight: 700, 
-                  color: venue.status === 'Free' ? '#10b981' : '#f59e0b',
-                  background: venue.status === 'Free' ? '#ecfdf5' : '#fffbeb',
-                  padding: '4px 8px',
-                  borderRadius: 4
-                }}>
-                  {venue.status}
-                </div>
-              </Link>
-            ))}
+          <div className="dash-table-wrap">
+            <table className="recent-table">
+              <thead>
+                <tr>
+                  <th>Resource</th>
+                  <th>Student Info</th>
+                  <th>Schedule</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBookings.map((booking) => (
+                  <tr key={booking.id}>
+                    <td style={{ fontWeight: 700, color: '#1e293b' }}>
+                      {booking.resource?.name || 'Deleted Resource'}
+                    </td>
+                    <td>
+                      <div className="student-info">
+                        <span className="student-name">{booking.user?.fullName}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{booking.user?.email}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="booking-meta">
+                        <FaClock style={{ fontSize: '0.8rem' }} />
+                        {booking.bookingDate} | {booking.startTime}-{booking.endTime}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="action-btns">
+                        <button className="btn-approve">Approve</button>
+                        <button className="btn-reject">Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {recentBookings.length === 0 && (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                      No pending bookings at the moment.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        </section>
 
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--cal-border)' }}>
-            <h4 style={{ fontSize: 14, marginBottom: 12 }}>Quick Stats</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--cal-muted)' }}>Total Venue Usage</span>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>78%</span>
-            </div>
-            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: '78%', height: '100%', background: 'var(--cal-primary)' }}></div>
-            </div>
+        <section className="content-section">
+          <div className="section-header">
+            <h2>Quick Actions</h2>
           </div>
-        </div>
+          <div className="quick-actions-list">
+            <Link to="/admin/resources" className="quick-action-item">
+              <div className="action-icon"><FaPlusCircle /></div>
+              Manage Resources
+            </Link>
+            <Link to="/admin/tickets" className="quick-action-item">
+              <div className="action-icon"><FaTicketAlt /></div>
+              Check Asset Tickets
+            </Link>
+            <Link to="/admin/statistics" className="quick-action-item">
+              <div className="action-icon"><FaUsers /></div>
+              User Analytics
+            </Link>
+            <Link to="/admin/settings" className="quick-action-item">
+              <div className="action-icon"><FaCog /></div>
+              System Settings
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   )

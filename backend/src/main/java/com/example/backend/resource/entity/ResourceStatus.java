@@ -1,6 +1,7 @@
 package com.example.backend.resource.entity;
 
 public enum ResourceStatus {
-	AVAILABLE,
-	UNAVAILABLE
+	ACTIVE,
+	OUT_OF_SERVICE,
+	UNDER_MAINTENANCE
 }
