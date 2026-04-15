@@ -10,4 +10,6 @@ public interface BookingService {
 
     List<BookingResponse> getUserBookings(String userEmail);
 
+    List<BookingResponse> getAllBookings();
+
 }

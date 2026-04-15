@@ -47,4 +47,9 @@ public class BookingController {
         String email = auth.getPrincipal().toString();
         return ResponseEntity.ok(bookingService.getUserBookings(email));
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<BookingResponse>> getAllBookings() {
+        return ResponseEntity.ok(bookingService.getAllBookings());
+    }
 }

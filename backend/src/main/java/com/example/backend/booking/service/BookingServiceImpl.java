@@ -54,4 +54,12 @@ public class BookingServiceImpl implements BookingService {
                 .map(bookingMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<BookingResponse> getAllBookings() {
+        return bookingRepository.findAll()
+                .stream()
+                .map(bookingMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }

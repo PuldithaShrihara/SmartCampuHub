@@ -7,3 +7,7 @@ export async function createBooking(data) {
 export async function getMyBookings() {
     return apiGetAuth('/api/bookings/my')
 }
+
+export async function getAllBookings() {
+    return apiGetAuth('/api/bookings/all')
+}

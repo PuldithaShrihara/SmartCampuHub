@@ -15,7 +15,6 @@ import Header from '../../components/common/Header.jsx'
 import { useAuth } from '../../context/useAuth.js'
 import { logout as clearSession } from '../../api/authApi.js'
 import AdminHome from './AdminHome.jsx'
-import PendingBookingsPage from './PendingBookingsPage.jsx'
 import AllBookingsPage from './AllBookingsPage.jsx'
 import ResourcesPage from './ResourcesPage.jsx'
 import TicketsPage from './TicketsPage.jsx'
@@ -34,11 +33,6 @@ export default function AdminDashboard() {
 
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/admin', end: true },
-    {
-      label: 'Pending Bookings',
-      icon: FaHourglassHalf,
-      path: '/admin/pending-bookings',
-    },
     { label: 'All Bookings', icon: FaCalendar, path: '/admin/all-bookings' },
     { label: 'Resources', icon: FaBuilding, path: '/admin/resources' },
     { label: 'All Tickets', icon: FaTicketAlt, path: '/admin/tickets' },
@@ -90,7 +84,6 @@ export default function AdminDashboard() {
         <div className="dashboard-content">
           <Routes>
             <Route path="/" element={<AdminHome />} />
-            <Route path="/pending-bookings" element={<PendingBookingsPage />} />
             <Route path="/all-bookings" element={<AllBookingsPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/tickets" element={<TicketsPage />} />
