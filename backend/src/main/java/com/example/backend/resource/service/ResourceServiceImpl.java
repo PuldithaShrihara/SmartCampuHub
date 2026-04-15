@@ -34,6 +34,10 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     public ResourceResponseDto createResource(ResourceRequestDto dto, MultipartFile photo) {
+        String normalizedLocation = normalizeLocation(dto.getLocation());
+        ensureLocationUniqueForCreate(normalizedLocation);
+        dto.setLocation(normalizedLocation);
+        applyLabDefaultCapacity(dto);
         Resource resource = mapper.toEntity(dto);
         if (photo != null && !photo.isEmpty()) {
             String photoUrl = fileStorageService.storeFile(photo, "resources");
@@ -46,10 +50,13 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public ResourceResponseDto updateResource(String id, ResourceRequestDto dto, MultipartFile photo) {
         Resource existing = repository.findById(id).orElseThrow(() -> new RuntimeException("Resource not found"));
+        String normalizedLocation = normalizeLocation(dto.getLocation());
+        ensureLocationUniqueForUpdate(normalizedLocation, id);
+        applyLabDefaultCapacity(dto);
         existing.setName(dto.getName());
         existing.setType(dto.getType());
         existing.setCapacity(dto.getCapacity());
-        existing.setLocation(dto.getLocation());
+        existing.setLocation(normalizedLocation);
         existing.setAvailabilityWindows(dto.getAvailabilityWindows());
         existing.setStatus(dto.getStatus());
         
@@ -89,5 +96,30 @@ public class ResourceServiceImpl implements ResourceService {
         }
         List<Resource> resources = mongoTemplate.find(query, Resource.class);
         return resources.stream().map(mapper::toDto).collect(Collectors.toList());
+    }
+
+    private String normalizeLocation(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            throw new RuntimeException("Location is required");
+        }
+        return location.trim().toUpperCase();
+    }
+
+    private void ensureLocationUniqueForCreate(String location) {
+        if (repository.existsByLocationIgnoreCase(location)) {
+            throw new RuntimeException("Location already exists: " + location);
+        }
+    }
+
+    private void ensureLocationUniqueForUpdate(String location, String id) {
+        if (repository.existsByLocationIgnoreCaseAndIdNot(location, id)) {
+            throw new RuntimeException("Location already exists: " + location);
+        }
+    }
+
+    private void applyLabDefaultCapacity(ResourceRequestDto dto) {
+        if (dto.getType() == ResourceType.LAB && dto.getCapacity() == null) {
+            dto.setCapacity(60);
+        }
     }
 }
