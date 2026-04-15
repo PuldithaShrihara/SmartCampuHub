@@ -14,6 +14,10 @@ export default function ResourcesPage() {
   const showToast = React.useCallback((message, type='success') => {
     pushToast({ type, message })
   }, [pushToast])
+  const formatType = (type) => (typeof type === 'string' ? type.replace(/_/g, ' ') : 'N/A')
+  const formatStatus = (status) => (typeof status === 'string' ? status.replace(/_/g, ' ') : 'UNKNOWN')
+  const statusClass = (status) =>
+    typeof status === 'string' ? status.toLowerCase() : 'unknown'
   
   const [resources, setResources] = useState([])
   const [filters, setFilters] = useState({ type: '', capacity: '', location: '' })
@@ -34,15 +38,10 @@ export default function ResourcesPage() {
   const loadResources = React.useCallback(async () => {
     try {
       const data = await fetchResources(filters)
-      const normalized = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.content)
-          ? data.content
-          : []
-      setResources(normalized.filter(Boolean))
+      setResources(Array.isArray(data) ? data : [])
     } catch {
-      showToast('Failed to load resources', 'error')
       setResources([])
+      showToast('Failed to load resources', 'error')
     }
   }, [filters, showToast])
 
@@ -63,14 +62,12 @@ export default function ResourcesPage() {
     if (resource) {
       setEditingResource(resource)
       setFormData({
-        name: resource.name || '',
-        type: resource.type || 'LECTURE_HALL',
-        capacity: resource.capacity ?? '',
-        location: resource.location || '',
-        availabilityWindows: Array.isArray(resource.availabilityWindows)
-          ? resource.availabilityWindows.join(', ')
-          : '',
-        status: resource.status || 'ACTIVE',
+        name: resource.name,
+        type: resource.type,
+        capacity: resource.capacity,
+        location: resource.location,
+        availabilityWindows: resource.availabilityWindows ? resource.availabilityWindows.join(', ') : '',
+        status: resource.status,
         photoUrl: resource.photoUrl || ''
       })
     } else {
@@ -221,22 +218,22 @@ export default function ResourcesPage() {
             </tr>
           </thead>
           <tbody>
-            {resources.map((res, idx) => (
-              <tr key={res.id || `${res.name || 'resource'}-${idx}`}>
+            {resources.map(res => (
+              <tr key={res.id}>
                 <td>
                   <img 
                     src={res.photoUrl || 'https://placehold.co/100x100?text=No+Photo'} 
-                    alt={res.name || 'Resource'} 
+                    alt={res.name} 
                     className="resource-thumbnail" 
                   />
                 </td>
-                <td style={{ fontWeight: 600 }}>{res.name || 'Unnamed Resource'}</td>
-                <td>{String(res.type || 'UNKNOWN').replace(/_/g, ' ')}</td>
-                <td>{res.capacity ?? '-'}</td>
-                <td>{res.location || '-'}</td>
+                <td style={{ fontWeight: 600 }}>{res.name}</td>
+                <td>{formatType(res.type)}</td>
+                <td>{res.capacity}</td>
+                <td>{res.location}</td>
                 <td>
-                  <span className={`status-badge ${String(res.status || 'unknown').toLowerCase().replace(/_/g, '')}`}>
-                    {String(res.status || 'UNKNOWN').replace(/_/g, ' ')}
+                  <span className={`status-badge ${statusClass(res.status)}`}>
+                    {formatStatus(res.status)}
                   </span>
                 </td>
                 <td className="action-buttons">
