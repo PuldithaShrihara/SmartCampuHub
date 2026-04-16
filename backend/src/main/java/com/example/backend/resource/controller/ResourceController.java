@@ -2,6 +2,7 @@ package com.example.backend.resource.controller;
 
 import com.example.backend.resource.dto.ResourceRequestDto;
 import com.example.backend.resource.dto.ResourceResponseDto;
+import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.entity.ResourceType;
 import com.example.backend.resource.service.ResourceService;
 import jakarta.validation.Valid;
@@ -24,8 +25,9 @@ public class ResourceController {
     public ResponseEntity<List<ResourceResponseDto>> getAllResources(
             @RequestParam(required = false) ResourceType type,
             @RequestParam(required = false) Integer minCapacity,
-            @RequestParam(required = false) String location) {
-        return ResponseEntity.ok(resourceService.getAllResources(type, minCapacity, location));
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) ResourceStatus status) {
+        return ResponseEntity.ok(resourceService.getAllResources(type, minCapacity, location, status));
     }
 
     @GetMapping("/{id}")

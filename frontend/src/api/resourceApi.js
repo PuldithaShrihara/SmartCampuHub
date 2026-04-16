@@ -5,6 +5,7 @@ export async function fetchResources(filters = {}) {
   if (filters.type) params.append('type', filters.type)
   if (filters.capacity) params.append('minCapacity', filters.capacity)
   if (filters.location) params.append('location', filters.location)
+  if (filters.status) params.append('status', filters.status)
 
   return apiGetAuth(`/api/resources?${params.toString()}`)
 }

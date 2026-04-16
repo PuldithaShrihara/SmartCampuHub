@@ -1,5 +1,8 @@
 package com.example.backend.booking.service;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -14,6 +17,7 @@ import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.booking.mapper.BookingMapper;
 import com.example.backend.booking.repository.BookingRepository;
 import com.example.backend.resource.entity.Resource;
+import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.repository.ResourceRepository;
 import com.example.backend.user.entity.User;
 import com.example.backend.user.repository.UserRepository;
@@ -21,6 +25,10 @@ import com.example.backend.user.repository.UserRepository;
 @Service
 public class BookingServiceImpl implements BookingService {
     private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
+    private static final LocalTime WORK_DAY_START = LocalTime.of(8, 0);
+    private static final LocalTime WORK_DAY_END = LocalTime.of(18, 0);
+    private static final long MIN_DURATION_MINUTES = 30;
+    private static final long MAX_DURATION_MINUTES = 240;
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
@@ -42,6 +50,7 @@ public class BookingServiceImpl implements BookingService {
 
         Resource resource = resourceRepository.findById(request.resourceId())
                 .orElseThrow(() -> new RuntimeException("Resource not found: " + request.resourceId()));
+        validateCreateBookingRequest(request, resource);
 
         Booking booking = bookingMapper.toEntity(request, user, resource);
         Booking savedBooking = bookingRepository.save(booking);
@@ -120,5 +129,64 @@ public class BookingServiceImpl implements BookingService {
             log.warn("Deleted malformed bookings with null resource reference: {}", malformedIds);
         }
         return malformedIds.size();
+    }
+
+    private void validateCreateBookingRequest(BookingRequest request, Resource resource) {
+        if (resource.getStatus() != ResourceStatus.ACTIVE) {
+            throw new RuntimeException("Selected resource is not available for booking");
+        }
+
+        Integer attendees = request.expectedAttendees();
+        Integer capacity = resource.getCapacity();
+        if (capacity != null && attendees != null && attendees > capacity) {
+            throw new RuntimeException("Expected attendees exceed selected resource capacity");
+        }
+
+        LocalDate today = LocalDate.now();
+        if (request.bookingDate().isBefore(today)) {
+            throw new RuntimeException("Booking date cannot be in the past");
+        }
+
+        LocalTime startTime = request.startTime();
+        LocalTime endTime = request.endTime();
+
+        if (startTime.isBefore(WORK_DAY_START) || startTime.isAfter(WORK_DAY_END)) {
+            throw new RuntimeException("Start time must be within working hours (08:00 - 18:00)");
+        }
+        if (endTime.isBefore(WORK_DAY_START) || endTime.isAfter(WORK_DAY_END)) {
+            throw new RuntimeException("End time must be within working hours (08:00 - 18:00)");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new RuntimeException("End time must be later than start time");
+        }
+        if (!isHalfHourSlot(startTime) || !isHalfHourSlot(endTime)) {
+            throw new RuntimeException("Start and end times must align to 30-minute slots");
+        }
+
+        long durationMinutes = Duration.between(startTime, endTime).toMinutes();
+        if (durationMinutes < MIN_DURATION_MINUTES || durationMinutes > MAX_DURATION_MINUTES) {
+            throw new RuntimeException("Booking duration must be between 30 minutes and 4 hours");
+        }
+
+        if (request.bookingDate().isEqual(today) && !startTime.isAfter(LocalTime.now())) {
+            throw new RuntimeException("Start time must be in the future for bookings made today");
+        }
+
+        List<Booking> existing = bookingRepository.findByResource_IdAndBookingDate(resource.getId(), request.bookingDate());
+        boolean hasConflict = existing.stream()
+                .filter(booking -> booking.getStatus() != BookingStatus.REJECTED && booking.getStatus() != BookingStatus.CANCELLED)
+                .anyMatch(booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
+        if (hasConflict) {
+            throw new RuntimeException("Selected time slot is already booked for this resource");
+        }
+    }
+
+    private boolean isHalfHourSlot(LocalTime time) {
+        int minute = time.getMinute();
+        return minute == 0 || minute == 30;
+    }
+
+    private boolean timeRangesOverlap(LocalTime startA, LocalTime endA, LocalTime startB, LocalTime endB) {
+        return startA.isBefore(endB) && endA.isAfter(startB);
     }
 }

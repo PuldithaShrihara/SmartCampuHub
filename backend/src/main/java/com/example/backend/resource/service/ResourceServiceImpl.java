@@ -3,6 +3,7 @@ package com.example.backend.resource.service;
 import com.example.backend.resource.dto.ResourceRequestDto;
 import com.example.backend.resource.dto.ResourceResponseDto;
 import com.example.backend.resource.entity.Resource;
+import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.entity.ResourceType;
 import com.example.backend.resource.mapper.ResourceMapper;
 import com.example.backend.resource.repository.ResourceRepository;
@@ -83,7 +84,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public List<ResourceResponseDto> getAllResources(ResourceType type, Integer minCapacity, String location) {
+    public List<ResourceResponseDto> getAllResources(ResourceType type, Integer minCapacity, String location, ResourceStatus status) {
         Query query = new Query();
         if (type != null) {
             query.addCriteria(Criteria.where("type").is(type));
@@ -93,6 +94,9 @@ public class ResourceServiceImpl implements ResourceService {
         }
         if (location != null && !location.isEmpty()) {
             query.addCriteria(Criteria.where("location").regex(location, "i"));
+        }
+        if (status != null) {
+            query.addCriteria(Criteria.where("status").is(status));
         }
         List<Resource> resources = mongoTemplate.find(query, Resource.class);
         return resources.stream().map(mapper::toDto).collect(Collectors.toList());
