@@ -18,13 +18,24 @@ export default function CreateBookingPage() {
       setLoading(true)
       setError('')
       try {
-        const data = await fetchResources()
+        const data = await fetchResources({ status: 'ACTIVE' })
         const normalized = Array.isArray(data)
           ? data
           : Array.isArray(data?.content)
             ? data.content
             : []
-        if (!cancelled) setResources(normalized.filter((r) => r && r.id))
+        if (!cancelled) {
+          setResources(
+            normalized.filter(
+              (r) =>
+                r &&
+                r.id &&
+                String(r.status || '')
+                  .trim()
+                  .toUpperCase() === 'ACTIVE',
+            ),
+          )
+        }
       } catch (err) {
         if (!cancelled) {
           setResources([])
@@ -70,7 +81,7 @@ export default function CreateBookingPage() {
           <div className="dash-msg error">{error}</div>
         ) : resources.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>
-            No resources are available right now. Ask admin to create resources first.
+            No active resources are available right now. Ask admin to activate resources first.
           </p>
         ) : (
           <BookingForm
