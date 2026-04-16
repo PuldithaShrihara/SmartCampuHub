@@ -4,6 +4,14 @@ export async function createBooking(data) {
     return apiPostAuth('/api/bookings', data)
 }
 
+export async function createSpaceBooking(data) {
+    return createBooking({ ...data, bookingType: 'SPACE' })
+}
+
+export async function createEquipmentBooking(data) {
+    return createBooking({ ...data, bookingType: 'EQUIPMENT' })
+}
+
 export async function getMyBookings() {
     return apiGetAuth('/api/bookings/my')
 }

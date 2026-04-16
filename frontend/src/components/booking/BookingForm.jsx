@@ -8,7 +8,14 @@ const PURPOSE_REGEX = /^[A-Za-z0-9\s.,!?()'"&:/-]+$/
 
 export default function BookingForm({ onSubmit, resources = [], submitting = false }) {
   const activeResources = resources.filter(
-    (resource) => String(resource?.status || '').trim().toUpperCase() === 'ACTIVE',
+    (resource) => {
+      const status = String(resource?.status || '').trim().toUpperCase()
+      const category = String(resource?.category || '').trim().toUpperCase()
+      const type = String(resource?.type || '').trim().toUpperCase()
+      // Backward compatible: if category is missing, treat non-EQUIPMENT types as SPACE.
+      const isSpaceResource = category ? category === 'SPACE' : type !== 'EQUIPMENT'
+      return status === 'ACTIVE' && isSpaceResource
+    },
   )
   const todayIso = new Date().toISOString().split('T')[0]
   const [formData, setFormData] = useState({

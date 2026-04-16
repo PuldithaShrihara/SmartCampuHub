@@ -10,8 +10,10 @@ public class Resource {
 	@Id
 	private String id;
 	private String name;
+	private ResourceCategory category;
 	private ResourceType type;
 	private Integer capacity;
+	private Integer quantity;
 	@Indexed(unique = true)
 	private String location;
 	private java.util.List<String> availabilityWindows;
@@ -42,12 +44,28 @@ public class Resource {
 		this.type = type;
 	}
 
+	public ResourceCategory getCategory() {
+		return category;
+	}
+
+	public void setCategory(ResourceCategory category) {
+		this.category = category;
+	}
+
 	public Integer getCapacity() {
 		return capacity;
 	}
 
 	public void setCapacity(Integer capacity) {
 		this.capacity = capacity;
+	}
+
+	public Integer getQuantity() {
+		return quantity;
+	}
+
+	public void setQuantity(Integer quantity) {
+		this.quantity = quantity;
 	}
 
 	public String getLocation() {

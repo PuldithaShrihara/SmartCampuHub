@@ -1,6 +1,7 @@
 package com.example.backend.resource.dto;
 
 import com.example.backend.resource.entity.ResourceStatus;
+import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.resource.entity.ResourceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,8 +15,13 @@ public class ResourceRequestDto {
     @NotNull(message = "Type is required")
     private ResourceType type;
 
+    private ResourceCategory category;
+
     @Min(value = 1, message = "Capacity must be at least 1")
     private Integer capacity;
+
+    @Min(value = 1, message = "Quantity must be at least 1")
+    private Integer quantity;
 
     @NotBlank(message = "Location is required")
     private String location;
@@ -43,12 +49,28 @@ public class ResourceRequestDto {
         this.type = type;
     }
 
+    public ResourceCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(ResourceCategory category) {
+        this.category = category;
+    }
+
     public Integer getCapacity() {
         return capacity;
     }
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
     public String getLocation() {

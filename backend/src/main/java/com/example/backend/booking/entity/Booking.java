@@ -31,6 +31,8 @@ public class Booking {
 	@DBRef
 	private Resource resource;
 
+	private BookingType bookingType;
+
 	private LocalDate bookingDate;
 
 	private LocalTime startTime;
@@ -40,6 +42,10 @@ public class Booking {
 	private String purpose;
 
 	private Integer expectedAttendees;
+
+	private Integer quantityRequested;
+
+	private String notes;
 
 	private BookingStatus status;
 
@@ -88,6 +94,14 @@ public class Booking {
 		this.bookingDate = bookingDate;
 	}
 
+	public BookingType getBookingType() {
+		return bookingType;
+	}
+
+	public void setBookingType(BookingType bookingType) {
+		this.bookingType = bookingType;
+	}
+
 	public LocalTime getStartTime() {
 		return startTime;
 	}
@@ -118,6 +132,22 @@ public class Booking {
 
 	public void setExpectedAttendees(Integer expectedAttendees) {
 		this.expectedAttendees = expectedAttendees;
+	}
+
+	public Integer getQuantityRequested() {
+		return quantityRequested;
+	}
+
+	public void setQuantityRequested(Integer quantityRequested) {
+		this.quantityRequested = quantityRequested;
+	}
+
+	public String getNotes() {
+		return notes;
+	}
+
+	public void setNotes(String notes) {
+		this.notes = notes;
 	}
 
 	public BookingStatus getStatus() {
