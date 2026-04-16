@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FaTools, FaCalendarCheck, FaClock, FaCheckCircle, FaArrowRight } from 'react-icons/fa'
 import { getAllBookings } from '../../api/bookingApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
 import { useAuth } from '../../context/useAuth.js'
-import '../../styles/DashboardLayout.css'
-
-function Stat({ label, value, color }) {
-  return (
-    <div className="dash-card" style={{ marginBottom: 0 }}>
-      <h2>{label}</h2>
-      <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color }}>{value}</p>
-    </div>
-  )
-}
+import StatCard from '../../components/dashboard/StatCard.jsx'
+import '../../styles/StudentHome.css'
 
 export default function TechnicianHome() {
   const { user } = useAuth()
@@ -20,9 +13,15 @@ export default function TechnicianHome() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const now = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+
   useEffect(() => {
     let cancelled = false
-
     async function loadDashboardData() {
       setLoading(true)
       setError('')
@@ -41,11 +40,8 @@ export default function TechnicianHome() {
         if (!cancelled) setLoading(false)
       }
     }
-
     loadDashboardData()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   const bookingStats = useMemo(() => {
@@ -66,94 +62,53 @@ export default function TechnicianHome() {
     return { pending, approved, resolvedToday }
   }, [bookings])
 
-  const recentBookings = useMemo(() => {
-    return bookings
-      .slice()
-      .sort((a, b) => {
-        const aDate = new Date(`${a.bookingDate || ''}T${a.startTime || '00:00'}`).getTime()
-        const bDate = new Date(`${b.bookingDate || ''}T${b.startTime || '00:00'}`).getTime()
-        return bDate - aDate
-      })
-      .slice(0, 5)
-  }, [bookings])
+  if (loading) {
+    return <div className="student-home" style={{ textAlign: 'center', padding: '100px' }}>Loading technician dashboard...</div>
+  }
 
   return (
-    <div>
-      <div className="dash-card" style={{
-        background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-        color: '#fff',
-        border: 'none',
-      }}>
-        <h2 style={{ color: '#fff', fontSize: '1.75rem', marginBottom: 8 }}>Hello, {user?.fullName || 'Technician'}!</h2>
-        <p style={{ margin: 0, color: '#e0e7ff', opacity: 0.9 }}>Welcome to your Technician Dashboard.</p>
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <Stat label="Pending Bookings" value={bookingStats.pending} color="#ef4444" />
-        <Stat label="Approved Bookings" value={bookingStats.approved} color="#f59e0b" />
-        <Stat label="Completed Today" value={bookingStats.resolvedToday} color="#10b981" />
-        <Stat label="Total Resources" value={resources.length} color="#6366f1" />
-      </div>
-
-      {loading && <div className="dash-card">Loading live dashboard data...</div>}
-      {!loading && error && <div className="dash-card dash-msg error">{error}</div>}
-
-      <div className="dash-card">
-        <h2>Recent Bookings</h2>
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Resource</th>
-                <th>Date & Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && !error && recentBookings.length === 0 && (
-                <tr>
-                  <td colSpan="4" style={{ color: 'var(--text-muted)' }}>
-                    No booking data available.
-                  </td>
-                </tr>
-              )}
-              {recentBookings.map((b) => (
-                <tr key={b.id}>
-                  <td>
-                    <div className="res-name">{b.userName || 'Unknown Student'}</div>
-                    <div className="res-id">{b.userId}</div>
-                  </td>
-                  <td>
-                    <div className="res-name">{b.resourceName || 'Unknown Resource'}</div>
-                    <div className="res-id">{b.resourceId}</div>
-                  </td>
-                  <td>
-                    <div>{b.bookingDate || '-'}</div>
-                    <div className="res-id">{b.startTime} - {b.endTime}</div>
-                  </td>
-                  <td>
-                    <span className={`dash-badge badge-${String(b.status || 'pending').toLowerCase().replace('_', '')}`}>
-                      {String(b.status || 'PENDING').replace('_', ' ')}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="student-home">
+      <div className="home-welcome">
+        <div className="welcome-text">
+          <p className="welcome-date">{now}</p>
+          <h2>Welcome back, {user?.fullName?.split(' ')[0] || 'Technician'}! 👋</h2>
+          <p className="welcome-sub">Maintenance & Resource Status: Operational.</p>
         </div>
       </div>
-      <div className="dash-card">
-        <h2>Resource Inventory</h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-          Showing live resource count from the backend: {resources.length}
-        </p>
+
+      <div className="stats-grid">
+        <StatCard
+          title="Pending Requests"
+          value={bookingStats.pending}
+          unit="Orders"
+          icon={FaClock}
+          color="#ef4444"
+        />
+        <StatCard
+          title="Active Jobs"
+          value={bookingStats.approved}
+          unit="Current"
+          icon={FaTools}
+          color="#484fd1"
+        />
+        <StatCard
+          title="Resolved Today"
+          value={bookingStats.resolvedToday}
+          unit="Tasks"
+          icon={FaCheckCircle}
+          color="#10b981"
+        />
+        <StatCard
+          title="Inventory Assets"
+          value={resources.length}
+          unit="Resources"
+          icon={FaCalendarCheck}
+          color="#ffb86c"
+        />
+      </div>
+
+      <div className="home-sections">
+        {/* Mock sections removed to ensure data integrity */}
       </div>
     </div>
   )
