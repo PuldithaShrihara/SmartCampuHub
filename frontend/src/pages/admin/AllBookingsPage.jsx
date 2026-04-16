@@ -99,8 +99,44 @@ export default function AllBookingsPage() {
 
   return (
     <section className="dash-card">
+      <style>{`
+          @media print {
+            .no-print, 
+            .sidebar, 
+            .app-header, 
+            .header-profile-wrap,
+            .dashboard-container .sidebar,
+            .dashboard-main .app-header { 
+              display: none !important; 
+            }
+            
+            .dashboard-main {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+            }
+
+            .dashboard-content {
+              padding: 0 !important;
+              margin: 0 !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+
+            .dash-card { 
+              box-shadow: none !important; 
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+
+            body {
+              background: #fff !important;
+            }
+          }
+        `}</style>
       <h3 style={{ marginBottom: 12 }}>Booking Records</h3>
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16 }} className="no-print">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
           <input
             type="text"
@@ -132,6 +168,14 @@ export default function AllBookingsPage() {
             <option value="REJECTED">REJECTED</option>
             <option value="CANCELLED">CANCELLED</option>
           </select>
+          <button
+            type="button"
+            className="dash-btn-outline"
+            onClick={handleDownloadPdf}
+            disabled={filteredBookings.length === 0}
+          >
+            Download PDF
+          </button>
         </div>
       </div>
       {actionError && <div className="dash-msg error">{actionError}</div>}
