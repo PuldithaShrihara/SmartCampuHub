@@ -1,14 +1,17 @@
 package com.example.backend.resource.dto;
 
 import com.example.backend.resource.entity.ResourceStatus;
+import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.resource.entity.ResourceType;
 import java.util.List;
 
 public class ResourceResponseDto {
     private String id;
     private String name;
+    private ResourceCategory category;
     private ResourceType type;
     private Integer capacity;
+    private Integer quantity;
     private String location;
     private List<String> availabilityWindows;
     private ResourceStatus status;
@@ -30,6 +33,14 @@ public class ResourceResponseDto {
         this.name = name;
     }
 
+    public ResourceCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(ResourceCategory category) {
+        this.category = category;
+    }
+
     public ResourceType getType() {
         return type;
     }
@@ -44,6 +55,14 @@ public class ResourceResponseDto {
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
     public String getLocation() {

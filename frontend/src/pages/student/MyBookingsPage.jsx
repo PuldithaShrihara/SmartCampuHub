@@ -1,11 +1,14 @@
 ﻿import { useState, useEffect } from 'react'
-import BookingForm from '../../components/booking/BookingForm.jsx'
+import BookingCategorySelector from '../../components/booking/BookingCategorySelector.jsx'
+import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingForm.jsx'
+import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
 import Modal from '../../components/common/Modal.jsx'
-import { createBooking, getMyBookings } from '../../api/bookingApi.js'
-import { fetchResources } from '../../api/resourceApi.js'
+import { createEquipmentBooking, createSpaceBooking, getMyBookings } from '../../api/bookingApi.js'
+import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
 
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [bookingCategory, setBookingCategory] = useState('')
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -33,14 +36,14 @@ export default function MyBookingsPage() {
   }, [])
 
   useEffect(() => {
-    if (!showCreateForm) return
+    if (!showCreateForm || !bookingCategory) return
 
     let cancelled = false
     async function loadResourcesForBooking() {
       setResourcesLoading(true)
       setResourcesError('')
       try {
-        const data = await fetchResources()
+        const data = await fetchActiveResourcesByCategory(bookingCategory)
         const normalized = Array.isArray(data)
           ? data
           : Array.isArray(data?.content)
@@ -63,20 +66,42 @@ export default function MyBookingsPage() {
     return () => {
       cancelled = true
     }
-  }, [showCreateForm])
+  }, [showCreateForm, bookingCategory])
 
-  async function handleDraftSubmit(data) {
+  async function handleSpaceSubmit(data) {
     try {
       setSubmittingBooking(true)
-      await createBooking(data)
-      alert('Booking submitted successfully!')
-      setShowCreateForm(false)
-      fetchBookings() // Refresh the list
+      await createSpaceBooking(data)
+      alert('Space booking submitted successfully!')
+      closeCreateModal()
+      fetchBookings()
     } catch (err) {
-      alert('Failed to submit booking: ' + err.message)
+      alert('Failed to submit space booking: ' + err.message)
     } finally {
       setSubmittingBooking(false)
     }
+  }
+
+  async function handleEquipmentSubmit(data) {
+    try {
+      setSubmittingBooking(true)
+      await createEquipmentBooking(data)
+      alert('Equipment booking submitted successfully!')
+      closeCreateModal()
+      fetchBookings()
+    } catch (err) {
+      alert('Failed to submit equipment booking: ' + err.message)
+    } finally {
+      setSubmittingBooking(false)
+    }
+  }
+
+  function closeCreateModal() {
+    setShowCreateForm(false)
+    setBookingCategory('')
+    setResources([])
+    setResourcesError('')
+    setResourcesLoading(false)
   }
 
   return (
@@ -100,24 +125,40 @@ export default function MyBookingsPage() {
 
         <Modal
           isOpen={showCreateForm}
-          onClose={() => setShowCreateForm(false)}
+          onClose={closeCreateModal}
           title="Create New Booking"
         >
-          {resourcesLoading ? (
-            <p>Loading available resources...</p>
-          ) : resourcesError ? (
-            <div className="dash-msg error">{resourcesError}</div>
-          ) : resources.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>
-              No resources available. Please ask admin to add resources first.
-            </p>
+          {!bookingCategory ? (
+            <BookingCategorySelector onSelect={setBookingCategory} disabled={submittingBooking} />
           ) : (
-            <BookingForm
-              onSubmit={handleDraftSubmit}
-              resources={resources}
-              submitting={submittingBooking}
-            />
+            <div style={{ marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+              <span className="dash-badge badge-pending">
+                {bookingCategory === 'SPACE' ? 'Labs / Lectures' : 'Equipments'}
+              </span>
+              <button
+                type="button"
+                className="dash-btn-outline"
+                onClick={() => setBookingCategory('')}
+                disabled={submittingBooking || resourcesLoading}
+              >
+                Change Type
+              </button>
+            </div>
           )}
+
+          {bookingCategory && resourcesLoading ? (
+            <p>Loading available resources...</p>
+          ) : bookingCategory && resourcesError ? (
+            <div className="dash-msg error">{resourcesError}</div>
+          ) : bookingCategory && resources.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)' }}>
+              No active {bookingCategory === 'SPACE' ? 'space resources' : 'equipment resources'} are available.
+            </p>
+          ) : bookingCategory === 'SPACE' ? (
+            <CreateSpaceBookingForm onSubmit={handleSpaceSubmit} resources={resources} submitting={submittingBooking} />
+          ) : bookingCategory === 'EQUIPMENT' ? (
+            <CreateEquipmentBookingForm onSubmit={handleEquipmentSubmit} resources={resources} submitting={submittingBooking} />
+          ) : null}
         </Modal>
 
         <div style={{ marginTop: 32 }}>

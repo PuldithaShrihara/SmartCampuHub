@@ -14,8 +14,10 @@ import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
 import com.example.backend.booking.entity.Booking;
 import com.example.backend.booking.entity.BookingStatus;
+import com.example.backend.booking.entity.BookingType;
 import com.example.backend.booking.mapper.BookingMapper;
 import com.example.backend.booking.repository.BookingRepository;
+import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.resource.entity.Resource;
 import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.repository.ResourceRepository;
@@ -29,6 +31,7 @@ public class BookingServiceImpl implements BookingService {
     private static final LocalTime WORK_DAY_END = LocalTime.of(18, 0);
     private static final long MIN_DURATION_MINUTES = 30;
     private static final long MAX_DURATION_MINUTES = 240;
+    private static final List<BookingStatus> BLOCKING_STATUSES = List.of(BookingStatus.PENDING, BookingStatus.APPROVED);
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
@@ -132,14 +135,19 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateCreateBookingRequest(BookingRequest request, Resource resource) {
+        if (request.bookingType() == null) {
+            throw new RuntimeException("Booking type is required");
+        }
         if (resource.getStatus() != ResourceStatus.ACTIVE) {
             throw new RuntimeException("Selected resource is not available for booking");
         }
 
-        Integer attendees = request.expectedAttendees();
-        Integer capacity = resource.getCapacity();
-        if (capacity != null && attendees != null && attendees > capacity) {
-            throw new RuntimeException("Expected attendees exceed selected resource capacity");
+        ResourceCategory resourceCategory = resolveCategory(resource);
+        if (request.bookingType() == BookingType.SPACE && resourceCategory != ResourceCategory.SPACE) {
+            throw new RuntimeException("Selected resource is not a space resource");
+        }
+        if (request.bookingType() == BookingType.EQUIPMENT && resourceCategory != ResourceCategory.EQUIPMENT) {
+            throw new RuntimeException("Selected resource is not an equipment resource");
         }
 
         LocalDate today = LocalDate.now();
@@ -162,6 +170,9 @@ public class BookingServiceImpl implements BookingService {
         if (!isHalfHourSlot(startTime) || !isHalfHourSlot(endTime)) {
             throw new RuntimeException("Start and end times must align to 30-minute slots");
         }
+        if (!isWithinAvailabilityWindows(resource, startTime, endTime)) {
+            throw new RuntimeException("Selected time range is outside resource availability window");
+        }
 
         long durationMinutes = Duration.between(startTime, endTime).toMinutes();
         if (durationMinutes < MIN_DURATION_MINUTES || durationMinutes > MAX_DURATION_MINUTES) {
@@ -172,13 +183,11 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Start time must be in the future for bookings made today");
         }
 
-        List<Booking> existing = bookingRepository.findByResource_IdAndBookingDate(resource.getId(), request.bookingDate());
-        boolean hasConflict = existing.stream()
-                .filter(booking -> booking.getStatus() != BookingStatus.REJECTED && booking.getStatus() != BookingStatus.CANCELLED)
-                .anyMatch(booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
-        if (hasConflict) {
-            throw new RuntimeException("Selected time slot is already booked for this resource");
+        if (request.bookingType() == BookingType.SPACE) {
+            validateSpaceBookingRules(request, resource, startTime, endTime);
+            return;
         }
+        validateEquipmentBookingRules(request, resource, startTime, endTime);
     }
 
     private boolean isHalfHourSlot(LocalTime time) {
@@ -188,5 +197,81 @@ public class BookingServiceImpl implements BookingService {
 
     private boolean timeRangesOverlap(LocalTime startA, LocalTime endA, LocalTime startB, LocalTime endB) {
         return startA.isBefore(endB) && endA.isAfter(startB);
+    }
+
+    private void validateSpaceBookingRules(BookingRequest request, Resource resource, LocalTime startTime, LocalTime endTime) {
+        Integer attendees = request.expectedAttendees();
+        if (attendees == null || attendees < 1) {
+            throw new RuntimeException("Expected attendees must be greater than 0");
+        }
+        Integer capacity = resource.getCapacity();
+        if (capacity != null && attendees > capacity) {
+            throw new RuntimeException("Expected attendees exceed selected resource capacity");
+        }
+        List<Booking> existing = bookingRepository.findByResource_IdAndBookingDate(resource.getId(), request.bookingDate());
+        boolean hasConflict = existing.stream()
+                .filter(booking -> booking.getStatus() != BookingStatus.REJECTED && booking.getStatus() != BookingStatus.CANCELLED)
+                .anyMatch(booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
+        if (hasConflict) {
+            throw new RuntimeException("Selected time slot is already booked for this resource");
+        }
+    }
+
+    private void validateEquipmentBookingRules(BookingRequest request, Resource resource, LocalTime startTime, LocalTime endTime) {
+        Integer quantityRequested = request.quantityRequested();
+        if (quantityRequested == null || quantityRequested < 1) {
+            throw new RuntimeException("Quantity requested must be greater than 0");
+        }
+        Integer totalQuantity = resource.getQuantity();
+        if (totalQuantity == null || totalQuantity < 1) {
+            throw new RuntimeException("Selected equipment does not have available stock configured");
+        }
+        if (quantityRequested > totalQuantity) {
+            throw new RuntimeException("Quantity requested exceeds available equipment quantity");
+        }
+
+        List<Booking> overlappingBookings = bookingRepository.findByResource_IdAndBookingDateAndStatusIn(
+                resource.getId(), request.bookingDate(), BLOCKING_STATUSES);
+        int alreadyBookedQuantity = overlappingBookings.stream()
+                .filter(booking -> booking.getBookingType() == BookingType.EQUIPMENT)
+                .filter(booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()))
+                .map(Booking::getQuantityRequested)
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        if (alreadyBookedQuantity + quantityRequested > totalQuantity) {
+            throw new RuntimeException("Quantity requested exceeds currently available quantity for this time range");
+        }
+    }
+
+    private ResourceCategory resolveCategory(Resource resource) {
+        if (resource.getCategory() != null) return resource.getCategory();
+        return resource.getType() == com.example.backend.resource.entity.ResourceType.EQUIPMENT
+                ? ResourceCategory.EQUIPMENT
+                : ResourceCategory.SPACE;
+    }
+
+    private boolean isWithinAvailabilityWindows(Resource resource, LocalTime startTime, LocalTime endTime) {
+        List<String> windows = resource.getAvailabilityWindows();
+        if (windows == null || windows.isEmpty()) return true;
+        return windows.stream()
+                .map(this::parseWindow)
+                .filter(Objects::nonNull)
+                .anyMatch(window -> !startTime.isBefore(window.start()) && !endTime.isAfter(window.end()));
+    }
+
+    private TimeWindow parseWindow(String rawWindow) {
+        if (rawWindow == null || !rawWindow.contains("-")) return null;
+        String[] parts = rawWindow.trim().split("-");
+        if (parts.length != 2) return null;
+        try {
+            return new TimeWindow(LocalTime.parse(parts[0].trim()), LocalTime.parse(parts[1].trim()));
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private record TimeWindow(LocalTime start, LocalTime end) {
     }
 }
