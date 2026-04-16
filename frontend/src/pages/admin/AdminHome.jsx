@@ -1,31 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { 
-  FaBuilding, 
-  FaCalendarCheck, 
-  FaUserCheck, 
-  FaUsers, 
-  FaPlusCircle,
-  FaTicketAlt,
-  FaCog
-} from 'react-icons/fa'
+import { FaBuilding, FaCalendarCheck, FaUserCheck, FaUsers, FaArrowRight } from 'react-icons/fa'
 import { useAuth } from '../../context/useAuth.js'
 import { fetchDashboardStats } from '../../api/dashboardApi.js'
-import './AdminHome.css'
-
-function StatCard({ label, value, icon: Icon, colorClass }) {
-  return (
-    <div className="stat-card">
-      <div className={`stat-icon ${colorClass}`}>
-        <Icon />
-      </div>
-      <div className="stat-info">
-        <span className="stat-value">{value.toLocaleString()}</span>
-        <span className="stat-label">{label}</span>
-      </div>
-    </div>
-  )
-}
+import StatCard from '../../components/dashboard/StatCard.jsx'
+import '../../styles/StudentHome.css' // Reuse the common layout styles
 
 export default function AdminHome() {
   const { user } = useAuth()
@@ -36,6 +14,13 @@ export default function AdminHome() {
     totalUsers: 0
   })
   const [loading, setLoading] = useState(true)
+
+  const now = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -51,76 +36,53 @@ export default function AdminHome() {
     loadDashboardData()
   }, [])
 
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good Morning'
-    if (hour < 17) return 'Good Afternoon'
-    return 'Good Evening'
-  }
-
   if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading dashboard...</div>
+    return <div className="student-home" style={{ textAlign: 'center', padding: '100px' }}>Loading admin dashboard...</div>
   }
 
   return (
-    <div className="admin-home">
-      <header className="welcome-banner">
-        <p>Member of Academic Staff</p>
-        <h1>{getGreeting()}, {user?.fullName?.split(' ')[0] || 'Admin'}</h1>
-        <p>Welcome back! Here's what's happening on campus today.</p>
-      </header>
+    <div className="student-home">
+      <div className="home-welcome">
+        <div className="welcome-text">
+          <p className="welcome-date">{now}</p>
+          <h2>Welcome back, {user?.fullName?.split(' ')[0] || 'Admin'}! 👋</h2>
+          <p className="welcome-sub">System Overview: Administrator Control Panel.</p>
+        </div>
+      </div>
 
-      <section className="stats-grid">
-        <StatCard 
-          label="Total Resources" 
-          value={stats.totalResources} 
-          icon={FaBuilding} 
-          colorClass="blue" 
+      <div className="stats-grid">
+        <StatCard
+          title="Total Resources"
+          value={stats.totalResources}
+          unit="Assets"
+          icon={FaBuilding}
+          color="#484fd1"
         />
-        <StatCard 
-          label="Total Bookings" 
-          value={stats.totalBookings} 
-          icon={FaCalendarCheck} 
-          colorClass="green" 
+        <StatCard
+          title="Total Bookings"
+          value={stats.totalBookings}
+          unit="Total"
+          icon={FaCalendarCheck}
+          color="#10b981"
         />
-        <StatCard 
-          label="Pending Approvals" 
-          value={stats.pendingApprovals} 
-          icon={FaUserCheck} 
-          colorClass="orange" 
+        <StatCard
+          title="Pending Approvals"
+          value={stats.pendingApprovals}
+          unit="Requests"
+          icon={FaUserCheck}
+          color="#ffb86c"
         />
-        <StatCard 
-          label="Total Users" 
-          value={stats.totalUsers} 
-          icon={FaUsers} 
-          colorClass="purple" 
+        <StatCard
+          title="Total Users"
+          value={stats.totalUsers}
+          unit="Members"
+          icon={FaUsers}
+          color="#ff85a1"
         />
-      </section>
+      </div>
 
-      <div className="dashboard-sections">
-        <section className="content-section">
-          <div className="section-header">
-            <h2>Quick Actions</h2>
-          </div>
-          <div className="quick-actions-list">
-            <Link to="/admin/resources" className="quick-action-item">
-              <div className="action-icon"><FaPlusCircle /></div>
-              Manage Resources
-            </Link>
-            <Link to="/admin/tickets" className="quick-action-item">
-              <div className="action-icon"><FaTicketAlt /></div>
-              Check Asset Tickets
-            </Link>
-            <Link to="/admin/statistics" className="quick-action-item">
-              <div className="action-icon"><FaUsers /></div>
-              User Analytics
-            </Link>
-            <Link to="/admin/settings" className="quick-action-item">
-              <div className="action-icon"><FaCog /></div>
-              System Settings
-            </Link>
-          </div>
-        </section>
+      <div className="home-sections">
+        {/* Mock sections removed to ensure data integrity */}
       </div>
     </div>
   )
