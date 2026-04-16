@@ -6,6 +6,7 @@ export default function AllBookingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
   const [updatingId, setUpdatingId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [selectedStatus, setSelectedStatus] = useState('PENDING')
@@ -85,8 +86,167 @@ export default function AllBookingsPage() {
     }
   }
 
-  const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredBookings = bookings.filter((booking) => {
+  const filteredBookings = filterBookings(bookings, searchTerm, statusFilter)
+
+  function handleDownloadPdf() {
+    try {
+      // No popup: the user chooses "Save as PDF" from the print dialog.
+      window.print()
+    } catch (err) {
+      window.alert(err?.message || 'Failed to open print dialog.')
+    }
+  }
+
+  return (
+    <section className="dash-card">
+      <h3 style={{ marginBottom: 12 }}>Booking Records</h3>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by student, resource, date, or status..."
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              padding: '10px 12px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: '#fff',
+            }}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: '10px 12px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: '#fff',
+            }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+        </div>
+      </div>
+      {actionError && <div className="dash-msg error">{actionError}</div>}
+      {loading ? (
+        <p>Loading bookings...</p>
+      ) : error ? (
+        <div className="dash-msg error">{error}</div>
+      ) : filteredBookings.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)' }}>No bookings found.</p>
+      ) : (
+        <div className="dash-table-wrap">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Resource</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th className="no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBookings.map((b) => (
+                <tr key={b.id}>
+                  <td>
+                    <div className="res-name">{b.userName}</div>
+                    <div className="res-id">{b.userId}</div>
+                  </td>
+                  <td>
+                    <div className="res-name">{b.resourceName || 'Unknown Resource'}</div>
+                    <div className="res-id">{b.resourceId}</div>
+                  </td>
+                  <td>
+                    <div>{b.bookingDate}</div>
+                    <div className="res-id">{b.startTime} - {b.endTime}</div>
+                  </td>
+                  <td>
+                    {editingId === b.id ? (
+                      <select
+                        className="dash-inline-select"
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        disabled={updatingId === b.id}
+                      >
+                        <option value="PENDING">PENDING</option>
+                        <option value="APPROVED">APPROVED</option>
+                        <option value="REJECTED">REJECTED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    ) : (
+                      <span className={`dash-badge badge-${b.status.toLowerCase()}`}>
+                        {b.status}
+                      </span>
+                    )}
+                  </td>
+                  <td className="no-print">
+                    {editingId === b.id ? (
+                      <div className="dash-actions-inline">
+                        <button
+                          type="button"
+                          className="dash-btn-outline"
+                          disabled={updatingId === b.id}
+                          onClick={() => handleSaveEdit(b.id)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="dash-btn-outline"
+                          disabled={updatingId === b.id}
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="dash-actions-inline">
+                        <button
+                          type="button"
+                          className="dash-btn-outline"
+                          disabled={updatingId === b.id}
+                          onClick={() => handleEditClick(b)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="dash-btn-outline"
+                          disabled={updatingId === b.id}
+                          onClick={() => handleDeleteBooking(b.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function filterBookings(bookings, searchTerm, statusFilter) {
+  const normalizedSearch = (searchTerm || '').trim().toLowerCase()
+  const normalizedStatus = (statusFilter || 'ALL').trim().toUpperCase()
+
+  return bookings.filter((booking) => {
+    if (normalizedStatus !== 'ALL') {
+      if ((booking.status || '').trim().toUpperCase() !== normalizedStatus) return false
+    }
+
     if (!normalizedSearch) return true
 
     const haystack = [
@@ -105,127 +265,5 @@ export default function AllBookingsPage() {
 
     return haystack.includes(normalizedSearch)
   })
-
-  return (
-      <section className="dash-card">
-        <h3 style={{ marginBottom: 12 }}>Booking Records</h3>
-        <div style={{ marginBottom: 16 }}>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by student, resource, date, or status..."
-            style={{
-              width: '100%',
-              maxWidth: 420,
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: '#fff',
-            }}
-          />
-        </div>
-        {actionError && <div className="dash-msg error">{actionError}</div>}
-        {loading ? (
-          <p>Loading bookings...</p>
-        ) : error ? (
-          <div className="dash-msg error">{error}</div>
-        ) : filteredBookings.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No bookings found.</p>
-        ) : (
-          <div className="dash-table-wrap">
-            <table className="dash-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Resource</th>
-                  <th>Date & Time</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBookings.map((b) => (
-                  <tr key={b.id}>
-                    <td>
-                      <div className="res-name">{b.userName}</div>
-                      <div className="res-id">{b.userId}</div>
-                    </td>
-                    <td>
-                      <div className="res-name">{b.resourceName || 'Unknown Resource'}</div>
-                      <div className="res-id">{b.resourceId}</div>
-                    </td>
-                    <td>
-                      <div>{b.bookingDate}</div>
-                      <div className="res-id">{b.startTime} - {b.endTime}</div>
-                    </td>
-                    <td>
-                      {editingId === b.id ? (
-                        <select
-                          className="dash-inline-select"
-                          value={selectedStatus}
-                          onChange={(e) => setSelectedStatus(e.target.value)}
-                          disabled={updatingId === b.id}
-                        >
-                          <option value="PENDING">PENDING</option>
-                          <option value="APPROVED">APPROVED</option>
-                          <option value="REJECTED">REJECTED</option>
-                          <option value="CANCELLED">CANCELLED</option>
-                        </select>
-                      ) : (
-                        <span className={`dash-badge badge-${b.status.toLowerCase()}`}>
-                          {b.status}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {editingId === b.id ? (
-                        <div className="dash-actions-inline">
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleSaveEdit(b.id)}
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={handleCancelEdit}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="dash-actions-inline">
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleEditClick(b)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleDeleteBooking(b.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-  )
 }
 
