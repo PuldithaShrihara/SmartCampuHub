@@ -5,6 +5,17 @@
   padding-bottom: 2rem;
 }
 
+.admin-loading {
+  min-height: 280px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-loading p {
+  color: #64748b;
+  font-weight: 600;
+}
+
 .welcome-banner {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   color: white;
@@ -40,6 +51,11 @@
   opacity: 0.9;
   position: relative;
   z-index: 1;
+}
+
+.welcome-date {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
 }
 
 .stats-grid {
@@ -232,6 +248,21 @@
   border: 1px solid transparent;
 }
 
+.quick-action-meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.quick-action-meta strong {
+  font-size: 0.95rem;
+}
+
+.quick-action-meta small {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 .quick-action-item:hover {
   background: white;
   border-color: #3b82f6;
@@ -251,8 +282,41 @@
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
+.snapshot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.snapshot-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: #f8fafc;
+}
+
+.snapshot-label {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.snapshot-value {
+  display: block;
+  color: #0f172a;
+  font-weight: 700;
+}
+
 @media (max-width: 1024px) {
   .dashboard-sections {
     grid-template-columns: 1fr;
+  }
+
+  .welcome-banner h1 {
+    font-size: 2rem;
   }
 }
