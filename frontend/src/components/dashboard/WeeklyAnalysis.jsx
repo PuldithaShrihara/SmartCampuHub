@@ -3,7 +3,7 @@ import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { getWeekDays } from '../../utils/CalendarEngine'
 import '../../styles/DashboardRedesign.css'
 
-const hours = Array.from({ length: 14 }, (_, i) => i + 8) // 8 AM to 9 PM
+const hours = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 to 21:00
 
 const mockBookings = [
   { day: 1, start: 9, end: 11, title: 'Lecture 1', color: 'blue' },
@@ -42,15 +42,15 @@ export default function WeeklyAnalysis({ venueName = 'Main Lecture Hall' }) {
 
         {hours.map(hour => (
           <>
-            <div key={`h-${hour}`} className="time-cell">{hour}:00</div>
+            <div key={`h-${hour}`} className="time-cell">{String(hour).padStart(2, '0')}:00</div>
             {Array.from({ length: 7 }).map((_, dayIdx) => {
               const booking = mockBookings.find(b => b.day === dayIdx && b.start === hour)
               return (
                 <div key={`slot-${hour}-${dayIdx}`} className="slot-cell">
                   {booking && (
-                    <div 
+                    <div
                       className={`booking-block label-${booking.color}`}
-                      style={{ 
+                      style={{
                         height: `${(booking.end - booking.start) * 60 - 4}px`,
                         top: '2px'
                       }}

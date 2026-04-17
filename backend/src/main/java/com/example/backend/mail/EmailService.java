@@ -1,6 +1,7 @@
 package com.example.backend.mail;
 
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.ByteArrayResource;
+import com.example.backend.booking.entity.Booking;
 
 @Service
 public class EmailService {
@@ -98,6 +101,54 @@ public class EmailService {
 		} catch (Exception ex) {
 			log.error("Unexpected error while building password reset OTP email for {}", toEmail, ex);
 			throw new IllegalStateException("Could not send password reset OTP email", ex);
+		}
+	}
+
+	public void sendBookingApprovalEmail(Booking booking, byte[] qrImageContent) {
+		if (!emailEnabled) {
+			log.info("Email disabled; skipping approval mail to {}", booking.getUser().getEmail());
+			return;
+		}
+
+		String toEmail = booking.getUser().getEmail();
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			// true indicates multipart for inline image
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+
+			helper.setFrom(new InternetAddress(fromAddress, senderName, StandardCharsets.UTF_8.name()));
+			helper.setTo(toEmail);
+			helper.setSubject("Booking Approved - Smart Campus Hub");
+
+			String htmlContent = String.format(
+					"<h2>Booking Confirmation</h2>" +
+							"<p>Dear %s,</p>" +
+							"<p>Your booking request has been <strong>APPROVED</strong>.</p>" +
+							"<p><strong>Details:</strong></p>" +
+							"<ul>" +
+							"<li><strong>Resource:</strong> %s</li>" +
+							"<li><strong>Date:</strong> %s</li>" +
+							"<li><strong>Time:</strong> %s - %s</li>" +
+							"</ul>" +
+							"<p>Show this QR code at the hall entrance for verification:</p>" +
+							"<img src='cid:qrCodeImage' alt='Booking QR Code' />" +
+							"<br/><br/>" +
+							"<p>Thank you for using Smart Campus Hub!</p>",
+					booking.getUser().getFullName(),
+					booking.getResource().getName(),
+					booking.getBookingDate(),
+					booking.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm")),
+					booking.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm")));
+
+			helper.setText(htmlContent, true); // true = HTML
+
+			// Add the inline QR image
+			helper.addInline("qrCodeImage", new ByteArrayResource(qrImageContent), "image/png");
+
+			mailSender.send(message);
+			log.info("Booking approval email with QR sent successfully to {}", toEmail);
+		} catch (Exception ex) {
+			log.error("Failed to send booking approval email to {}", toEmail, ex);
 		}
 	}
 }
