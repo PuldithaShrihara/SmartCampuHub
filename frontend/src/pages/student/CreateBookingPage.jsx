@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import BookingCategorySelector from '../../components/booking/BookingCategorySelector.jsx'
 import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingForm.jsx'
 import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
@@ -7,12 +8,20 @@ import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
 import { useToast } from '../../components/toastContext.js'
 
 export default function CreateBookingPage() {
+  const location = useLocation()
   const { pushToast } = useToast()
   const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const initialCategory = String(location.state?.initialCategory || '').toUpperCase()
+    if (initialCategory === 'SPACE' || initialCategory === 'EQUIPMENT') {
+      setBookingCategory(initialCategory)
+    }
+  }, [location.state])
 
   useEffect(() => {
     if (!bookingCategory) {

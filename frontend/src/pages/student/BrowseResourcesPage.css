@@ -1,0 +1,150 @@
+.student-resources-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.student-resources-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.student-resource-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.student-resource-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -12px rgba(0, 0, 0, 0.35);
+}
+
+.student-resource-card-image-wrap {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  background: #f3f4f6;
+}
+
+.student-resource-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #e5e7eb;
+}
+
+.student-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  backdrop-filter: blur(2px);
+}
+
+.student-status-badge.active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.student-status-badge.out_of_service {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.student-status-badge.under_maintenance {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.student-resource-card-body {
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.student-resource-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.student-resource-card-type {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.student-resource-card-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.student-resource-card-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.student-resource-card-detail span {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.student-resource-card-detail strong {
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.student-resource-card-availability {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.student-availability-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.student-availability-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.student-availability-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.student-availability-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
