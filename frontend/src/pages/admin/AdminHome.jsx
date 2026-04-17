@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react'
-import { FaBuilding, FaCalendarCheck, FaUserCheck, FaUsers, FaArrowRight } from 'react-icons/fa'
+import {
+  FaArrowRight,
+  FaBuilding,
+  FaCalendarCheck,
+  FaChartBar,
+  FaTicketAlt,
+  FaUserCheck,
+  FaUsers
+} from 'react-icons/fa'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth.js'
 import { fetchDashboardStats } from '../../api/dashboardApi.js'
 import StatCard from '../../components/dashboard/StatCard.jsx'
-import '../../styles/StudentHome.css' // Reuse the common layout styles
+import './AdminHome.css'
 
 export default function AdminHome() {
   const { user } = useAuth()
@@ -22,6 +31,33 @@ export default function AdminHome() {
     year: 'numeric'
   })
 
+  const quickActions = [
+    {
+      label: 'Review all bookings',
+      description: 'Approve, reject, and monitor booking requests.',
+      path: '/admin/all-bookings',
+      icon: FaCalendarCheck
+    },
+    {
+      label: 'Manage resources',
+      description: 'Update asset details and availability.',
+      path: '/admin/resources',
+      icon: FaBuilding
+    },
+    {
+      label: 'Handle support tickets',
+      description: 'Track open issues raised by users.',
+      path: '/admin/tickets',
+      icon: FaTicketAlt
+    },
+    {
+      label: 'View platform statistics',
+      description: 'Check trends and usage metrics.',
+      path: '/admin/statistics',
+      icon: FaChartBar
+    }
+  ]
+
   useEffect(() => {
     async function loadDashboardData() {
       try {
@@ -37,18 +73,22 @@ export default function AdminHome() {
   }, [])
 
   if (loading) {
-    return <div className="student-home" style={{ textAlign: 'center', padding: '100px' }}>Loading admin dashboard...</div>
+    return (
+      <div className="admin-home admin-loading">
+        <p>Loading admin dashboard...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="student-home">
-      <div className="home-welcome">
+    <div className="admin-home">
+      <section className="welcome-banner">
         <div className="welcome-text">
           <p className="welcome-date">{now}</p>
-          <h2>Welcome back, {user?.fullName?.split(' ')[0] || 'Admin'}! 👋</h2>
-          <p className="welcome-sub">System Overview: Administrator Control Panel.</p>
+          <h1>Welcome back, {user?.fullName?.split(' ')[0] || 'Admin'}! 👋</h1>
+          <p>System Overview: Administrator Control Panel.</p>
         </div>
-      </div>
+      </section>
 
       <div className="stats-grid">
         <StatCard
@@ -81,9 +121,50 @@ export default function AdminHome() {
         />
       </div>
 
-      <div className="home-sections">
-        {/* Mock sections removed to ensure data integrity */}
-      </div>
+      <section className="dashboard-sections">
+        <div className="content-section">
+          <div className="section-header">
+            <h2>Quick Actions</h2>
+          </div>
+          <div className="quick-actions-list">
+            {quickActions.map((action) => {
+              const Icon = action.icon
+              return (
+                <Link key={action.path} to={action.path} className="quick-action-item">
+                  <span className="action-icon">
+                    <Icon />
+                  </span>
+                  <span className="quick-action-meta">
+                    <strong>{action.label}</strong>
+                    <small>{action.description}</small>
+                  </span>
+                  <FaArrowRight />
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="content-section">
+          <div className="section-header">
+            <h2>Platform Snapshot</h2>
+          </div>
+          <div className="snapshot-list">
+            <div className="snapshot-item">
+              <span className="snapshot-label">Booking pressure</span>
+              <span className="snapshot-value">{stats.totalBookings} requests tracked</span>
+            </div>
+            <div className="snapshot-item">
+              <span className="snapshot-label">Pending decisions</span>
+              <span className="snapshot-value">{stats.pendingApprovals} awaiting review</span>
+            </div>
+            <div className="snapshot-item">
+              <span className="snapshot-label">Community size</span>
+              <span className="snapshot-value">{stats.totalUsers} active members</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
