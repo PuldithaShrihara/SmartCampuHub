@@ -11,10 +11,10 @@ const PERIOD_OPTIONS = [
 ]
 
 const SLOT_META = {
-  MORNING: { label: 'Morning (6 AM - 12 PM)' },
-  AFTERNOON: { label: 'Afternoon (12 PM - 5 PM)' },
-  EVENING: { label: 'Evening (5 PM - 9 PM)' },
-  NIGHT: { label: 'Night (9 PM - 6 AM)' },
+  MORNING: { label: 'Morning (06:00 - 11:59)' },
+  AFTERNOON: { label: 'Afternoon (12:00 - 16:59)' },
+  EVENING: { label: 'Evening (17:00 - 20:59)' },
+  NIGHT: { label: 'Night (21:00 - 05:59)' },
 }
 const CHART_COLORS = ['#4f46e5', '#16a34a', '#f59e0b', '#ec4899', '#0ea5e9', '#64748b']
 
@@ -354,12 +354,21 @@ function getTimeSlot(startTime) {
 
 function parseHour(timeText) {
   if (!timeText) return 0
-  const text = String(timeText).trim().toUpperCase()
-  const match = text.match(/^(\d{1,2})(?::\d{2})?\s*(AM|PM)?$/)
+  const normalized = String(timeText).trim().toUpperCase().replace(/\./g, ':')
+  const firstPart = normalized.split('-')[0].trim()
+  const match = firstPart.match(/^(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?\s*(AM|PM)?$/)
   if (!match) return 0
 
   let hour = Number(match[1])
-  const meridiem = match[2]
+  const minute = match[2] ? Number(match[2]) : 0
+  const second = match[3] ? Number(match[3]) : 0
+  const meridiem = match[4]
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || !Number.isFinite(second)) return 0
+  if (minute < 0 || minute > 59 || second < 0 || second > 59) return 0
+
+  // Support 12-hour and 24-hour inputs:
+  // - "1:30 PM" -> 13
+  // - "13:30", "13:30:00", or "13.30" -> 13
   if (meridiem === 'PM' && hour < 12) hour += 12
   if (meridiem === 'AM' && hour === 12) hour = 0
   if (hour < 0 || hour > 23) return 0

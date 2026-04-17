@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { deleteBooking, getAllBookings, updateBookingStatus } from '../../api/bookingApi.js'
 
 export default function AllBookingsPage() {
