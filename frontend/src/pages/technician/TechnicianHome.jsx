@@ -1,93 +1,116 @@
+import { useEffect, useMemo, useState } from 'react'
+import { FaTools, FaCalendarCheck, FaClock, FaCheckCircle, FaArrowRight } from 'react-icons/fa'
+import { getAllBookings } from '../../api/bookingApi.js'
+import { fetchResources } from '../../api/resourceApi.js'
 import { useAuth } from '../../context/useAuth.js'
-import '../../styles/DashboardLayout.css'
-
-const mockData = {
-  openTickets: 5,
-  inProgressTickets: 2,
-  resolvedToday: 3,
-  assignedResources: 3,
-  tickets: [
-    { id: 1, title: 'Projector broken', priority: 'HIGH', status: 'OPEN' },
-    {
-      id: 2,
-      title: 'AC not working',
-      priority: 'MEDIUM',
-      status: 'IN_PROGRESS',
-    },
-  ],
-}
-
-function Stat({ label, value, color }) {
-  return (
-    <div className="dash-card" style={{ marginBottom: 0 }}>
-      <h2>{label}</h2>
-      <p style={{ margin: 0, fontSize: 30, fontWeight: 700, color }}>{value}</p>
-    </div>
-  )
-}
+import StatCard from '../../components/dashboard/StatCard.jsx'
+import '../../styles/StudentHome.css'
 
 export default function TechnicianHome() {
   const { user } = useAuth()
+  const [bookings, setBookings] = useState([])
+  const [resources, setResources] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const now = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadDashboardData() {
+      setLoading(true)
+      setError('')
+      try {
+        const [bookingsData, resourcesData] = await Promise.all([
+          getAllBookings(),
+          fetchResources(),
+        ])
+        if (cancelled) return
+        setBookings(Array.isArray(bookingsData) ? bookingsData : [])
+        setResources(Array.isArray(resourcesData) ? resourcesData : [])
+      } catch (err) {
+        if (cancelled) return
+        setError(err?.message || 'Failed to load technician dashboard data')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    loadDashboardData()
+    return () => { cancelled = true }
+  }, [])
+
+  const bookingStats = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    let pending = 0
+    let approved = 0
+    let resolvedToday = 0
+
+    bookings.forEach((booking) => {
+      const status = String(booking.status || '').toUpperCase()
+      if (status === 'PENDING') pending += 1
+      if (status === 'APPROVED') approved += 1
+      if (status === 'COMPLETED' && booking.bookingDate === today) {
+        resolvedToday += 1
+      }
+    })
+
+    return { pending, approved, resolvedToday }
+  }, [bookings])
+
+  if (loading) {
+    return <div className="student-home" style={{ textAlign: 'center', padding: '100px' }}>Loading technician dashboard...</div>
+  }
+
   return (
-    <div>
-      <div className="dash-card">
-        <h2>Hello, {user?.fullName || 'Technician'}!</h2>
-        <p style={{ margin: 0, color: '#616161' }}>Technician Dashboard</p>
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <Stat label="Open Tickets" value={mockData.openTickets} color="#c62828" />
-        <Stat
-          label="In Progress Tickets"
-          value={mockData.inProgressTickets}
-          color="#ef6c00"
-        />
-        <Stat label="Resolved Today" value={mockData.resolvedToday} color="#2e7d32" />
-        <Stat
-          label="Assigned Resources"
-          value={mockData.assignedResources}
-          color="#1a237e"
-        />
-      </div>
-      <div className="dash-card">
-        <h2>My Assigned Tickets</h2>
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockData.tickets.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.title}</td>
-                  <td>{t.priority}</td>
-                  <td>{t.status}</td>
-                  <td>
-                    <button type="button">Take Action</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="student-home">
+      <div className="home-welcome">
+        <div className="welcome-text">
+          <p className="welcome-date">{now}</p>
+          <h2>Welcome back, {user?.fullName?.split(' ')[0] || 'Technician'}! 👋</h2>
+          <p className="welcome-sub">Maintenance & Resource Status: Operational.</p>
         </div>
       </div>
-      <div className="dash-card">
-        <h2>Resource Booking Schedule</h2>
-        <p style={{ color: '#616161', margin: 0 }}>
-          Lab 101 is booked 10:00-12:00 today, available after.
-        </p>
+
+      <div className="stats-grid">
+        <StatCard
+          title="Pending Requests"
+          value={bookingStats.pending}
+          unit="Orders"
+          icon={FaClock}
+          color="#ef4444"
+        />
+        <StatCard
+          title="Active Jobs"
+          value={bookingStats.approved}
+          unit="Current"
+          icon={FaTools}
+          color="#484fd1"
+        />
+        <StatCard
+          title="Resolved Today"
+          value={bookingStats.resolvedToday}
+          unit="Tasks"
+          icon={FaCheckCircle}
+          color="#10b981"
+        />
+        <StatCard
+          title="Inventory Assets"
+          value={resources.length}
+          unit="Resources"
+          icon={FaCalendarCheck}
+          color="#ffb86c"
+        />
+      </div>
+
+      <div className="home-sections">
+        {/* Mock sections removed to ensure data integrity */}
       </div>
     </div>
   )
 }
+

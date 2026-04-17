@@ -11,7 +11,7 @@ export default function Sidebar({ menuItems, userRole, userName, onLogout }) {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">Smart Campus Hub</div>
+      <div className="sidebar-logo">Smart Campus</div>
 
       <nav className="sidebar-nav" aria-label="Dashboard navigation">
         {menuItems.map((item) => (
@@ -23,20 +23,22 @@ export default function Sidebar({ menuItems, userRole, userName, onLogout }) {
               `sidebar-item${isActive ? ' sidebar-item-active' : ''}`
             }
           >
-            <item.icon size={20} />
+            <item.icon />
             <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
       <div className="sidebar-user">
-        <div className="sidebar-avatar">{initials || 'U'}</div>
-        <div className="sidebar-user-meta">
-          <strong>{userName || 'User'}</strong>
-          <span className="sidebar-role">{userRole}</span>
+        <div className="sidebar-user-info">
+          <div className="sidebar-avatar">{initials || 'U'}</div>
+          <div className="sidebar-user-meta">
+            <strong>{userName || 'User'}</strong>
+            <span className="sidebar-role">{userRole}</span>
+          </div>
         </div>
         <button type="button" onClick={onLogout} className="sidebar-logout">
-          Logout
+          <span>Logout</span>
         </button>
       </div>
     </aside>

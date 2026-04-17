@@ -112,22 +112,12 @@ export default function UsersPage() {
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               required
-              style={{
-                width: '100%',
-                maxWidth: 400,
-                boxSizing: 'border-box',
-                padding: '10px 12px',
-                border: '1px solid #e0e0e0',
-                borderRadius: 4,
-                fontFamily: 'inherit',
-                fontSize: 14,
-              }}
             >
               <option value="STUDENT">STUDENT</option>
               <option value="TECHNICIAN">TECHNICIAN</option>
             </select>
           </div>
-          <button type="submit" disabled={loading}>
+          <button type="submit" disabled={loading} className="dash-btn">
             {loading ? 'Adding...' : 'Add User'}
           </button>
         </form>
@@ -153,9 +143,9 @@ export default function UsersPage() {
                   <td>
                     <button
                       type="button"
+                      className="dash-btn-danger"
                       onClick={() => handleHardDelete(item)}
                       disabled={deletingId === item.id}
-                      style={{ background: '#c62828' }}
                     >
                       {deletingId === item.id ? 'Deleting...' : 'Hard Delete'}
                     </button>

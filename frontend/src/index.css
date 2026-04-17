@@ -1,22 +1,38 @@
 ﻿:root {
-  --bg: #f0f2ff;
-  /* Light lavender/periwinkle */
+  /* New Premium Palette */
+  --bg: #f8fafc;
+  /* Very light blue-ish white */
+  --sidebar-bg: #2d32b8;
+  /* Deep royal blue */
+  --sidebar-active: #484fd1;
+  /* Vibrant indigo for active items */
   --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --text: #1e1b4b;
-  /* Dark navy/indigo */
+  --surface-glass: rgba(255, 255, 255, 0.85);
+  --surface-muted: #f1f5f9;
+
+  --text-main: #1a1a1a;
+  --text-sidebar: #ffffff;
   --text-muted: #64748b;
-  --border: #e2e8f0;
-  --primary: #6366f1;
-  /* Indigo */
-  --primary-strong: #4f46e5;
-  --topbar: #1e1b4b;
-  --topbar-2: #312e81;
-  --danger: #ef4444;
-  --success: #10b981;
-  --radius: 24px;
-  /* More rounded as per template */
-  --shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
+
+  --primary: #484fd1;
+  --secondary: #ff85a1;
+  /* Soft pink as seen in template */
+  --accent: #ffb86c;
+  /* Soft orange/gold */
+  --info: #4cc9f0;
+  /* Cyan/Light blue */
+
+  --border: #eef2f6;
+  --radius-lg: 32px;
+  /* Large rounded corners for sidebar/cards */
+  --radius-md: 20px;
+  --radius-sm: 12px;
+
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 20px 60px rgba(45, 50, 184, 0.12);
+
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -26,8 +42,10 @@
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--text);
-  font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--text-main);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -37,14 +55,24 @@ h4,
 h5,
 h6 {
   margin: 0;
-  color: var(--text);
+  color: var(--text-main);
+  font-weight: 700;
 }
 
 a {
   color: var(--primary);
   text-decoration: none;
+  transition: var(--transition);
 }
 
 a:hover {
-  text-decoration: underline;
+  opacity: 0.8;
+}
+
+/* Glassmorphism Utility */
+.glass-effect {
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }

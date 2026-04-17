@@ -91,145 +91,158 @@ export default function SuperadminDashboard() {
   }
 
   return (
-    <div className="dash-page">
+    <div className="dashboard-container">
       <Sidebar
         menuItems={menuItems}
         userRole="SUPERADMIN"
         userName={user?.fullName}
         onLogout={handleLogout}
       />
-      <div className="dash-main-v2">
+      <div className="dashboard-main">
         <Header
           title="Superadmin Dashboard"
           userName={user?.fullName}
-          onLogout={handleLogout}
+          userRole="SUPERADMIN"
         />
-        <div className="dash-content-v2">
-          {msg.text ? (
-            <div className={`dash-msg ${msg.type}`}>{msg.text}</div>
-          ) : null}
+        <div className="dashboard-content">
+          <div className="student-home">
+            <div className="home-welcome">
+              <div className="welcome-text">
+                <h2>Superuser Panel</h2>
+                <p className="welcome-sub">Managing Smart Campus platform infrastructure.</p>
+              </div>
+            </div>
 
-          <div className="dash-card">
-            <h2>Add Platform Admin</h2>
-            <form className="dash-form-grid" onSubmit={submitAdmin}>
-              <div>
-                <label>Full name</label>
-                <input
-                  value={adminForm.fullName}
-                  onChange={(e) =>
-                    setAdminForm({ ...adminForm, fullName: e.target.value })
-                  }
-                  required
-                  maxLength={120}
-                />
-              </div>
-              <div>
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={adminForm.email}
-                  onChange={(e) =>
-                    setAdminForm({ ...adminForm, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label>Password</label>
-                <input
-                  type="password"
-                  value={adminForm.password}
-                  onChange={(e) =>
-                    setAdminForm({ ...adminForm, password: e.target.value })
-                  }
-                  required
-                  minLength={8}
-                  maxLength={72}
-                />
-              </div>
-              <button type="submit" disabled={saving}>
-                Create Admin
-              </button>
-            </form>
-          </div>
-
-          <div className="dash-card">
-            <h2>Add Campus Technician</h2>
-            <form className="dash-form-grid" onSubmit={submitTech}>
-              <div>
-                <label>Full name</label>
-                <input
-                  value={techForm.fullName}
-                  onChange={(e) =>
-                    setTechForm({ ...techForm, fullName: e.target.value })
-                  }
-                  required
-                  maxLength={120}
-                />
-              </div>
-              <div>
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={techForm.email}
-                  onChange={(e) =>
-                    setTechForm({ ...techForm, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label>Password</label>
-                <input
-                  type="password"
-                  value={techForm.password}
-                  onChange={(e) =>
-                    setTechForm({ ...techForm, password: e.target.value })
-                  }
-                  required
-                  minLength={8}
-                  maxLength={72}
-                />
-              </div>
-              <button type="submit" disabled={saving}>
-                Create Technician
-              </button>
-            </form>
-          </div>
-
-          <div className="dash-card">
-            <h2>All System Users</h2>
-            {loadError ? (
-              <div className="dash-msg error">{loadError}</div>
+            {msg.text ? (
+              <div className={`dash-msg ${msg.type}`} style={{ marginBottom: 24 }}>{msg.text}</div>
             ) : null}
-            <div className="dash-table-wrap">
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.fullName}</td>
-                      <td>{u.email}</td>
-                      <td>
-                        <span className="dash-badge">{u.role}</span>
-                      </td>
+
+            <div className="home-sections">
+              <div className="section-card">
+                <div className="section-header">
+                  <h3>Add Platform Admin</h3>
+                </div>
+                <form className="dash-form-grid" onSubmit={submitAdmin}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Full name</label>
+                    <input
+                      className="form-input"
+                      value={adminForm.fullName}
+                      onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Email</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={adminForm.email}
+                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Password</label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      value={adminForm.password}
+                      onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="sidebar-logout" style={{ background: 'var(--primary)', border: 'none' }} disabled={saving}>
+                    Create Admin
+                  </button>
+                </form>
+              </div>
+
+              <div className="section-card">
+                <div className="section-header">
+                  <h3>Add Campus Technician</h3>
+                </div>
+                <form className="dash-form-grid" onSubmit={submitTech}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Full name</label>
+                    <input
+                      className="form-input"
+                      value={techForm.fullName}
+                      onChange={(e) => setTechForm({ ...techForm, fullName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Email</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={techForm.email}
+                      onChange={(e) => setTechForm({ ...techForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>Password</label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      value={techForm.password}
+                      onChange={(e) => setTechForm({ ...techForm, password: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="sidebar-logout" style={{ background: 'var(--primary)', border: 'none' }} disabled={saving}>
+                    Create Technician
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div className="section-card" style={{ marginTop: 24 }}>
+              <div className="section-header">
+                <h3>All System Users</h3>
+              </div>
+              <div className="dash-table-wrap">
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {users.length === 0 && !loadError ? (
-                <p style={{ color: '#757575', marginTop: 12 }}>No users found in the system.</p>
-              ) : null}
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id}>
+                        <td>{u.fullName}</td>
+                        <td>{u.email}</td>
+                        <td>
+                          <span className={`dash-badge badge-${u.role.toLowerCase()}`}>{u.role}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <style>{`
+        .form-input {
+          width: 100%;
+          padding: 12px 16px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border);
+          outline: none;
+          transition: var(--transition);
+        }
+        .form-input:focus {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 4px rgba(72, 79, 209, 0.1);
+        }
+      `}</style>
     </div>
   )
 }

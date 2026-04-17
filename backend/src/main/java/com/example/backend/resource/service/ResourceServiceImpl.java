@@ -3,6 +3,8 @@ package com.example.backend.resource.service;
 import com.example.backend.resource.dto.ResourceRequestDto;
 import com.example.backend.resource.dto.ResourceResponseDto;
 import com.example.backend.resource.entity.Resource;
+import com.example.backend.resource.entity.ResourceCategory;
+import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.entity.ResourceType;
 import com.example.backend.resource.mapper.ResourceMapper;
 import com.example.backend.resource.repository.ResourceRepository;
@@ -55,7 +57,9 @@ public class ResourceServiceImpl implements ResourceService {
         applyLabDefaultCapacity(dto);
         existing.setName(dto.getName());
         existing.setType(dto.getType());
+        existing.setCategory(dto.getCategory() != null ? dto.getCategory() : inferCategory(dto.getType()));
         existing.setCapacity(dto.getCapacity());
+        existing.setQuantity(dto.getQuantity());
         existing.setLocation(normalizedLocation);
         existing.setAvailabilityWindows(dto.getAvailabilityWindows());
         existing.setStatus(dto.getStatus());
@@ -83,7 +87,7 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public List<ResourceResponseDto> getAllResources(ResourceType type, Integer minCapacity, String location) {
+    public List<ResourceResponseDto> getAllResources(ResourceType type, Integer minCapacity, String location, ResourceStatus status, ResourceCategory category) {
         Query query = new Query();
         if (type != null) {
             query.addCriteria(Criteria.where("type").is(type));
@@ -94,8 +98,28 @@ public class ResourceServiceImpl implements ResourceService {
         if (location != null && !location.isEmpty()) {
             query.addCriteria(Criteria.where("location").regex(location, "i"));
         }
+        if (status != null) {
+            query.addCriteria(Criteria.where("status").is(status));
+        }
+        if (category != null) {
+            query.addCriteria(Criteria.where("category").is(category));
+        }
         List<Resource> resources = mongoTemplate.find(query, Resource.class);
-        return resources.stream().map(mapper::toDto).collect(Collectors.toList());
+        return resources.stream()
+                .filter(resource -> category == null || category.equals(resolveCategory(resource)))
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ResourceResponseDto> getActiveResourcesByCategory(ResourceCategory category) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("status").is(ResourceStatus.ACTIVE));
+        List<Resource> resources = mongoTemplate.find(query, Resource.class);
+        return resources.stream()
+                .filter(resource -> category.equals(resolveCategory(resource)))
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
     }
 
     private String normalizeLocation(String location) {
@@ -121,5 +145,15 @@ public class ResourceServiceImpl implements ResourceService {
         if (dto.getType() == ResourceType.LAB && dto.getCapacity() == null) {
             dto.setCapacity(60);
         }
+    }
+
+    private ResourceCategory resolveCategory(Resource resource) {
+        if (resource.getCategory() != null) return resource.getCategory();
+        return inferCategory(resource.getType());
+    }
+
+    private ResourceCategory inferCategory(ResourceType type) {
+        if (type == ResourceType.EQUIPMENT) return ResourceCategory.EQUIPMENT;
+        return ResourceCategory.SPACE;
     }
 }

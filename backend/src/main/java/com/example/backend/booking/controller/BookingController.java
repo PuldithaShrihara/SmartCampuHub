@@ -1,13 +1,21 @@
 package com.example.backend.booking.controller;
 
+import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
+import com.example.backend.booking.dto.BookingStatusUpdateRequest;
+import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.booking.service.BookingService;
 
 import jakarta.validation.Valid;
@@ -32,5 +40,55 @@ public class BookingController {
         }
         String email = auth.getPrincipal().toString();
         return ResponseEntity.ok(bookingService.createBooking(request, email));
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<BookingResponse>> getMyBookings() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+        if (auth == null || auth.getPrincipal() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        String email = auth.getPrincipal().toString();
+        return ResponseEntity.ok(bookingService.getUserBookings(email));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<BookingResponse>> getAllBookings() {
+        return ResponseEntity.ok(bookingService.getAllBookings());
+    }
+
+    @PutMapping("/{bookingId}/status")
+    public ResponseEntity<BookingResponse> updateBookingStatus(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingStatusUpdateRequest request) {
+        BookingStatus status;
+        try {
+            status = BookingStatus.valueOf(request.status().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, status, request.rejectionReason()));
+    }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable String bookingId) {
+        bookingService.deleteBooking(bookingId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/malformed")
+    public ResponseEntity<List<String>> listMalformedBookings() {
+        return ResponseEntity.ok(bookingService.findMalformedBookingIds());
+    }
+
+    @DeleteMapping("/malformed")
+    public ResponseEntity<Map<String, Object>> deleteMalformedBookings() {
+        int deleted = bookingService.deleteMalformedBookings();
+        return ResponseEntity.ok(Map.of(
+                "deletedCount", deleted,
+                "message", "Malformed bookings cleanup completed"));
     }
 }
