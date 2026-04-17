@@ -1,20 +1,46 @@
 import { useEffect, useState } from 'react'
-import { getAllIncidents, updateIncident } from '../../api/incidentApi.js'
+import { getAllIncidents } from '../../api/incidentApi.js'
+import '../../styles/TicketsPage.css'
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
+
+function statusClass(status) {
+  const normalized = String(status || '').toLowerCase()
+  if (normalized === 'resolved') return 'ticket-status resolved'
+  if (normalized === 'in progress') return 'ticket-status progress'
+  return 'ticket-status pending'
+}
+
+function getStatusCounts(incidents) {
+  return incidents.reduce(
+    (acc, item) => {
+      const key = String(item.status || '').toLowerCase()
+      if (key === 'resolved') acc.resolved += 1
+      else if (key === 'in progress') acc.inProgress += 1
+      else acc.pending += 1
+      return acc
+    },
+    { pending: 0, inProgress: 0, resolved: 0 }
+  )
+}
 
 export default function Tickets() {
   const [statusFilter, setStatusFilter] = useState('')
   const [incidents, setIncidents] = useState([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const statusCounts = getStatusCounts(incidents)
 
   async function loadIncidents() {
     try {
+      setLoading(true)
       setError('')
       const res = await getAllIncidents(statusFilter)
       setIncidents(Array.isArray(res?.data) ? res.data : [])
     } catch (err) {
       setError(err.message || 'Could not load incidents')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -22,34 +48,51 @@ export default function Tickets() {
     loadIncidents()
   }, [statusFilter])
 
-  async function handleStatusChange(incidentId, nextStatus) {
-    try {
-      await updateIncident(incidentId, { status: nextStatus })
-      await loadIncidents()
-    } catch (err) {
-      setError(err.message || 'Could not update incident status')
-    }
-  }
-
   return (
-    <section className="dash-card">
-      <h2>All Incident Tickets</h2>
+    <div className="tickets-page">
+      <section className="dash-card tickets-hero">
+        <div>
+          <h2>All Incident Tickets</h2>
+        </div>
+        <div className="tickets-count-grid">
+          <div className="tickets-total">
+            <span>Total</span>
+            <strong>{incidents.length}</strong>
+          </div>
+          <div className="tickets-mini-badges">
+            <span className="mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="mini-pill progress">In Progress {statusCounts.inProgress}</span>
+            <span className="mini-pill resolved">Resolved {statusCounts.resolved}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="dash-card tickets-table-card">
       {error ? <div className="dash-msg error">{error}</div> : null}
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ marginRight: 8 }}>Filter by status:</label>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All</option>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+      <div className="tickets-toolbar">
+        <div className="tickets-filter">
+          <label htmlFor="ticket-status-filter">Filter by status</label>
+          <select
+            id="ticket-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <span className="tickets-meta">
+          {loading ? 'Loading incidents...' : `${incidents.length} ticket(s) found`}
+        </span>
       </div>
 
       <div className="dash-table-wrap">
-        <table className="dash-table">
+        <table className="dash-table tickets-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -62,7 +105,9 @@ export default function Tickets() {
           <tbody>
             {incidents.length === 0 ? (
               <tr>
-                <td colSpan={5}>No incidents found.</td>
+                <td colSpan={5} className="tickets-empty-state">
+                  No incidents found.
+                </td>
               </tr>
             ) : (
               incidents.map((item) => (
@@ -71,16 +116,9 @@ export default function Tickets() {
                   <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                   <td>{item.resourceId?.name || '-'}</td>
                   <td>
-                    <select
-                      value={item.status}
-                      onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="tickets-status-cell">
+                      <span className={statusClass(item.status)}>{item.status}</span>
+                    </div>
                   </td>
                   <td>{item.technicianRemarks || '-'}</td>
                 </tr>
@@ -89,6 +127,7 @@ export default function Tickets() {
           </tbody>
         </table>
       </div>
-    </section>
+      </section>
+    </div>
   )
 }
