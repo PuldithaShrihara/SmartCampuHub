@@ -36,6 +36,7 @@ export default function ResourcesPage() {
     name: '',
     type: 'LECTURE_HALL',
     capacity: '',
+    quantity: '',
     location: '',
     availabilityWindows: '',
     status: 'ACTIVE',
@@ -77,6 +78,13 @@ export default function ResourcesPage() {
       }
       if (!['LECTURE_HALL', 'LAB', 'MEETING_ROOM'].includes(formData.type)) {
         errors.type = 'Please select a valid type.'
+      }
+    } else {
+      const quantity = parseInt(formData.quantity, 10)
+      if (formData.quantity === '') {
+        errors.quantity = 'Available quantity is required.'
+      } else if (Number.isNaN(quantity) || quantity < 1) {
+        errors.quantity = 'Available quantity must be at least 1.'
       }
     }
 
@@ -131,6 +139,7 @@ export default function ResourcesPage() {
         name: resource.name,
         type: resource.type,
         capacity: resource.capacity,
+        quantity: resource.quantity ?? '',
         location: resource.location,
         availabilityWindows: resource.availabilityWindows ? resource.availabilityWindows.join(', ') : '',
         status: resource.status,
@@ -143,6 +152,7 @@ export default function ResourcesPage() {
         name: '',
         type: 'LECTURE_HALL',
         capacity: '',
+        quantity: '',
         location: '',
         availabilityWindows: '',
         status: 'ACTIVE',
@@ -164,6 +174,7 @@ export default function ResourcesPage() {
       type: category === 'EQUIPMENT' ? 'EQUIPMENT' : 'LECTURE_HALL',
       name: '',
       capacity: '',
+      quantity: '',
       location: '',
       availabilityWindows: '',
       status: 'ACTIVE',
@@ -202,9 +213,14 @@ export default function ResourcesPage() {
         formData.capacity === '' || Number.isNaN(parseInt(formData.capacity, 10))
           ? null
           : parseInt(formData.capacity, 10)
+      const normalizedQuantity =
+        formData.quantity === '' || Number.isNaN(parseInt(formData.quantity, 10))
+          ? null
+          : parseInt(formData.quantity, 10)
       const payload = {
         ...formData,
         capacity: normalizedCapacity,
+        quantity: normalizedQuantity,
         availabilityWindows: parseAvailabilityWindowsInput(formData.availabilityWindows)
       }
       
@@ -328,8 +344,8 @@ export default function ResourcesPage() {
                   <p className="resource-card-type">{formatType(res.type)}</p>
                   <div className="resource-card-details">
                     <div className="resource-card-detail">
-                      <span>Capacity</span>
-                      <strong>{res.capacity ?? 'N/A'}</strong>
+                      <span>{res.type === 'EQUIPMENT' ? 'Available Qty' : 'Capacity'}</span>
+                      <strong>{res.type === 'EQUIPMENT' ? (res.quantity ?? 'N/A') : (res.capacity ?? 'N/A')}</strong>
                     </div>
                     <div className="resource-card-detail">
                       <span>Location</span>
@@ -441,6 +457,22 @@ export default function ResourcesPage() {
                     placeholder="e.g. 150"
                   />
                   {formErrors.capacity && <p className="field-error">{formErrors.capacity}</p>}
+                </div>
+              )}
+              {isEquipmentForm && (
+                <div className="form-group">
+                  <label>Available Quantity</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    className={formErrors.quantity ? 'input-error' : ''}
+                    placeholder="e.g. 20"
+                  />
+                  {formErrors.quantity && <p className="field-error">{formErrors.quantity}</p>}
                 </div>
               )}
               <div className="form-group">

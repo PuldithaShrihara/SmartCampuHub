@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const WORKING_HOUR_START_MINUTES = 8 * 60
 const WORKING_HOUR_END_MINUTES = 18 * 60
@@ -6,16 +6,17 @@ const MIN_DURATION_MINUTES = 30
 const MAX_DURATION_MINUTES = 4 * 60
 const PURPOSE_REGEX = /^[A-Za-z0-9\s.,!?()'"&:/-]+$/
 
-export default function BookingForm({ onSubmit, resources = [], submitting = false }) {
-  const activeResources = resources.filter(
-    (resource) => {
-      const status = String(resource?.status || '').trim().toUpperCase()
-      const category = String(resource?.category || '').trim().toUpperCase()
-      const type = String(resource?.type || '').trim().toUpperCase()
-      // Backward compatible: if category is missing, treat non-EQUIPMENT types as SPACE.
-      const isSpaceResource = category ? category === 'SPACE' : type !== 'EQUIPMENT'
-      return status === 'ACTIVE' && isSpaceResource
-    },
+export default function BookingForm({ onSubmit, resources = [], submitting = false, initialResourceId }) {
+  const activeResources = useMemo(
+    () =>
+      resources.filter((resource) => {
+        const status = String(resource?.status || '').trim().toUpperCase()
+        const category = String(resource?.category || '').trim().toUpperCase()
+        const type = String(resource?.type || '').trim().toUpperCase()
+        const isSpaceResource = category ? category === 'SPACE' : type !== 'EQUIPMENT'
+        return status === 'ACTIVE' && isSpaceResource
+      }),
+    [resources],
   )
   const todayIso = new Date().toISOString().split('T')[0]
   const [formData, setFormData] = useState({
@@ -29,7 +30,20 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
   const [submitted, setSubmitted] = useState(false)
-  const selectedResource = activeResources.find((resource) => resource.id === formData.resourceId)
+
+  useEffect(() => {
+    if (initialResourceId == null || initialResourceId === '') return
+    const match = activeResources.find((resource) => String(resource.id) === String(initialResourceId))
+    if (!match) return
+    setFormData((prev) => {
+      if (String(prev.resourceId) === String(match.id)) return prev
+      return { ...prev, resourceId: String(match.id) }
+    })
+  }, [initialResourceId, activeResources])
+
+  const selectedResource = activeResources.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const selectedResourceCapacity = Number(selectedResource?.capacity)
 
   function handleChange(e) {
@@ -91,7 +105,7 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
         >
           <option value="">Select a resource</option>
           {activeResources.map((resource) => (
-            <option key={resource.id} value={resource.id}>
+            <option key={resource.id} value={String(resource.id)}>
               {resource.name || 'Unnamed Resource'} ({resource.location || 'No location'})
             </option>
           ))}
@@ -200,7 +214,9 @@ function FieldErrorText({ children }) {
 
 function validateForm(formData, resources) {
   const validationErrors = {}
-  const selectedResource = resources.find((resource) => resource.id === formData.resourceId)
+  const selectedResource = resources.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const resourceCapacity = Number(selectedResource?.capacity)
   const attendees = Number(formData.attendees)
   const purpose = (formData.purpose || '').trim()
