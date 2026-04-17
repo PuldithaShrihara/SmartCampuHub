@@ -9,6 +9,7 @@ import { useToast } from '../../components/toastContext.js'
 
 export default function CreateBookingPage() {
   const location = useLocation()
+  const preselectedResourceId = location.state?.preselectedResourceId
   const { pushToast } = useToast()
   const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
@@ -120,9 +121,19 @@ export default function CreateBookingPage() {
             No active {bookingCategory === 'SPACE' ? 'space resources' : 'equipment resources'} are available right now.
           </p>
         ) : bookingCategory === 'SPACE' ? (
-          <CreateSpaceBookingForm resources={resources} submitting={submitting} onSubmit={handleCreateSpaceBooking} />
+          <CreateSpaceBookingForm
+            resources={resources}
+            submitting={submitting}
+            onSubmit={handleCreateSpaceBooking}
+            initialResourceId={preselectedResourceId}
+          />
         ) : bookingCategory === 'EQUIPMENT' ? (
-          <CreateEquipmentBookingForm resources={resources} submitting={submitting} onSubmit={handleCreateEquipmentBooking} />
+          <CreateEquipmentBookingForm
+            resources={resources}
+            submitting={submitting}
+            onSubmit={handleCreateEquipmentBooking}
+            initialResourceId={preselectedResourceId}
+          />
         ) : null}
       </section>
     </>
