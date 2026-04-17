@@ -1,4 +1,4 @@
-import { apiGetAuth, apiPostAuthMultipart, apiPutAuth } from './client.js'
+import { apiDeleteAuth, apiGetAuth, apiPostAuthMultipart, apiPutAuth } from './client.js'
 
 /**
  * @param {{ title: string, description: string, resourceId: string, file?: File | null }} payload
@@ -16,6 +16,21 @@ export async function createIncident(payload) {
 
 export async function getMyIncidents() {
   return apiGetAuth('/api/incidents/my')
+}
+
+/**
+ * @param {string} incidentId
+ * @param {{title: string, description: string, resourceId: string}} payload
+ */
+export async function updateMyIncident(incidentId, payload) {
+  return apiPutAuth(`/api/incidents/my/${incidentId}`, payload)
+}
+
+/**
+ * @param {string} incidentId
+ */
+export async function deleteMyIncident(incidentId) {
+  return apiDeleteAuth(`/api/incidents/my/${incidentId}`)
 }
 
 export async function getAllIncidents(status = '') {

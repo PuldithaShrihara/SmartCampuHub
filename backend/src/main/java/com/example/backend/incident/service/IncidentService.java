@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.backend.incident.dto.IncidentResponseDto;
+import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
 
 public interface IncidentService {
@@ -12,6 +13,10 @@ public interface IncidentService {
 			String authenticatedEmail);
 
 	List<IncidentResponseDto> getMyIncidents(String authenticatedEmail);
+
+	IncidentResponseDto updateMyPendingIncident(String incidentId, IncidentStudentUpdateRequest request, String authenticatedEmail);
+
+	void deleteMyPendingIncident(String incidentId, String authenticatedEmail);
 
 	List<IncidentResponseDto> getAllIncidents(String status, String authenticatedEmail);
 

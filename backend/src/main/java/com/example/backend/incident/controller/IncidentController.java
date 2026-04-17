@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.common.response.ApiResponse;
 import com.example.backend.incident.dto.IncidentResponseDto;
+import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
 import com.example.backend.incident.service.IncidentService;
 
@@ -51,6 +53,22 @@ public class IncidentController {
 		String email = authenticatedEmail();
 		List<IncidentResponseDto> data = incidentService.getMyIncidents(email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "My incidents fetched successfully", data));
+	}
+
+	@PutMapping("/my/{id}")
+	public ResponseEntity<ApiResponse<IncidentResponseDto>> updateMyPendingIncident(
+			@PathVariable("id") String id,
+			@RequestBody IncidentStudentUpdateRequest request) {
+		String email = authenticatedEmail();
+		IncidentResponseDto data = incidentService.updateMyPendingIncident(id, request, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident updated successfully", data));
+	}
+
+	@DeleteMapping("/my/{id}")
+	public ResponseEntity<ApiResponse<Object>> deleteMyPendingIncident(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		incidentService.deleteMyPendingIncident(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident deleted successfully", null));
 	}
 
 	@GetMapping

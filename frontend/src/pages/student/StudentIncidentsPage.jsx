@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react'
-import { createIncident, getMyIncidents } from '../../api/incidentApi.js'
-import '../../styles/IncidentPage.css'
+import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
+import { fetchResources } from '../../api/resourceApi.js'
+import '../../styles/StudentIncidentsPage.css'
+
+function statusClass(status) {
+  const normalized = String(status || '').toLowerCase()
+  if (normalized === 'resolved') return 'incident-status resolved'
+  if (normalized === 'in progress') return 'incident-status progress'
+  return 'incident-status pending'
+}
+
+function getStatusCounts(incidents) {
+  return incidents.reduce(
+    (acc, item) => {
+      const key = String(item.status || '').toLowerCase()
+      if (key === 'resolved') acc.resolved += 1
+      else if (key === 'in progress') acc.inProgress += 1
+      else acc.pending += 1
+      return acc
+    },
+    { pending: 0, inProgress: 0, resolved: 0 }
+  )
+}
 
 export default function StudentIncidentsPage() {
   const [title, setTitle] = useState('')
@@ -11,16 +32,10 @@ export default function StudentIncidentsPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [incidents, setIncidents] = useState([])
-
-  const pendingCount = incidents.filter((item) => item.status === 'Pending').length
-  const inProgressCount = incidents.filter((item) => item.status === 'In Progress').length
-  const resolvedCount = incidents.filter((item) => item.status === 'Resolved').length
-
-  function statusClass(status) {
-    if (status === 'Resolved') return 'inc-status resolved'
-    if (status === 'In Progress') return 'inc-status progress'
-    return 'inc-status pending'
-  }
+  const [resources, setResources] = useState([])
+  const [resourcesLoading, setResourcesLoading] = useState(false)
+  const [editingIncidentId, setEditingIncidentId] = useState(null)
+  const statusCounts = getStatusCounts(incidents)
 
   async function loadMyIncidents() {
     try {
@@ -33,7 +48,30 @@ export default function StudentIncidentsPage() {
 
   useEffect(() => {
     loadMyIncidents()
+    loadResources()
   }, [])
+
+  async function loadResources() {
+    try {
+      setResourcesLoading(true)
+      const res = await fetchResources()
+      const list = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.content)
+            ? res.content
+            : []
+      setResources(list)
+      if (!resourceId && list.length > 0) {
+        setResourceId(list[0].id)
+      }
+    } catch (err) {
+      setError(err.message || 'Could not load resources')
+    } finally {
+      setResourcesLoading(false)
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -41,20 +79,72 @@ export default function StudentIncidentsPage() {
     setMessage('')
     setLoading(true)
     try {
-      await createIncident({
-        title: title.trim(),
-        description: description.trim(),
-        resourceId: resourceId.trim(),
-        file,
-      })
+      if (editingIncidentId) {
+        await updateMyIncident(editingIncidentId, {
+          title: title.trim(),
+          description: description.trim(),
+          resourceId: resourceId.trim(),
+        })
+      } else {
+        await createIncident({
+          title: title.trim(),
+          description: description.trim(),
+          resourceId: resourceId.trim(),
+          file,
+        })
+      }
       setTitle('')
       setDescription('')
       setResourceId('')
       setFile(null)
-      setMessage('Incident submitted successfully.')
+      setEditingIncidentId(null)
+      setMessage(editingIncidentId ? 'Incident updated successfully.' : 'Incident submitted successfully.')
       await loadMyIncidents()
     } catch (err) {
-      setError(err.message || 'Could not submit incident')
+      setError(err.message || (editingIncidentId ? 'Could not update incident' : 'Could not submit incident'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function startEditIncident(item) {
+    if (String(item.status || '').toLowerCase() !== 'pending') return
+    setEditingIncidentId(item.id)
+    setTitle(item.title || '')
+    setDescription(item.description || '')
+    setResourceId(item.resourceId?.id || item.resourceId || '')
+    setFile(null)
+    setMessage('')
+    setError('')
+  }
+
+  function cancelEdit() {
+    setEditingIncidentId(null)
+    setTitle('')
+    setDescription('')
+    setResourceId(resources.length > 0 ? resources[0].id : '')
+    setFile(null)
+    setMessage('')
+    setError('')
+  }
+
+  async function handleDeleteIncident(item) {
+    if (String(item.status || '').toLowerCase() !== 'pending') return
+    const confirmed = window.confirm('Delete this pending incident? This action cannot be undone.')
+    if (!confirmed) return
+
+    setError('')
+    setMessage('')
+    setLoading(true)
+    try {
+      await deleteMyIncident(item.id)
+      if (editingIncidentId === item.id) {
+        cancelEdit()
+      }
+      setMessage('Incident deleted successfully.')
+      await loadMyIncidents()
+    } catch (err) {
+      setError(err.message || 'Could not delete incident')
     } finally {
       setLoading(false)
     }
@@ -62,113 +152,121 @@ export default function StudentIncidentsPage() {
 
   return (
     <div className="incident-page">
-      <section className="dash-card inc-hero">
-        <div>
-          <h2>Incident Center</h2>
-          <p>Submit issues quickly and track technician progress in real time.</p>
+      <section className="dash-card incident-hero">
+        <div className="incident-hero-copy">
+          <h2>Report an Incident</h2>
+          <p>Create and track issues related to campus resources.</p>
         </div>
-        <div className="inc-stats">
-          <div className="inc-stat">
-            <span>Total</span>
+        <div className="incident-count-grid">
+          <div className="incident-count">
+            <span>Total tickets</span>
             <strong>{incidents.length}</strong>
           </div>
-          <div className="inc-stat">
-            <span>Pending</span>
-            <strong>{pendingCount}</strong>
-          </div>
-          <div className="inc-stat">
-            <span>In Progress</span>
-            <strong>{inProgressCount}</strong>
-          </div>
-          <div className="inc-stat">
-            <span>Resolved</span>
-            <strong>{resolvedCount}</strong>
+          <div className="incident-mini-badges">
+            <span className="mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="mini-pill progress">In Progress {statusCounts.inProgress}</span>
+            <span className="mini-pill resolved">Resolved {statusCounts.resolved}</span>
           </div>
         </div>
       </section>
 
-      <section className="dash-card inc-form-card">
-        <div className="inc-section-head">
-          <h3>Report New Incident</h3>
-          <p>Add clear details so technicians can resolve it faster.</p>
-        </div>
-
+      <section className="dash-card incident-form-card">
         {message ? <div className="dash-msg success">{message}</div> : null}
         {error ? <div className="dash-msg error">{error}</div> : null}
 
-        <form className="dash-form-grid inc-form-grid" onSubmit={handleSubmit}>
-          <div className="inc-field">
+        <form className="incident-form-grid" onSubmit={handleSubmit}>
+          <div className="incident-field">
             <label htmlFor="incident-title">Title</label>
             <input
               id="incident-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Projector not working in hall"
+              placeholder="e.g. Projector is not working"
               required
             />
           </div>
-
-          <div className="inc-field">
+          <div className="incident-field">
             <label htmlFor="incident-description">Description</label>
             <textarea
               id="incident-description"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what happened and when it was observed."
+              placeholder="Describe the issue clearly so technicians can help faster."
               required
             />
           </div>
-
-          <div className="inc-field">
-            <label htmlFor="incident-resource">Resource ID</label>
-            <input
-              id="incident-resource"
-              value={resourceId}
-              onChange={(e) => setResourceId(e.target.value)}
-              placeholder="e.g. res-lha"
-              required
-            />
+          <div className="incident-form-row">
+            <div className="incident-field incident-field-half">
+              <label htmlFor="incident-resource">Resource</label>
+              <select
+                id="incident-resource"
+                value={resourceId}
+                onChange={(e) => setResourceId(e.target.value)}
+                required
+                disabled={resourcesLoading || resources.length === 0}
+              >
+                {resources.length === 0 ? (
+                  <option value="">
+                    {resourcesLoading ? 'Loading resources...' : 'No resources found'}
+                  </option>
+                ) : (
+                  resources.map((resource) => (
+                    <option key={resource.id} value={resource.id}>
+                      {resource.name} ({resource.location || resource.id})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div className="incident-field incident-field-half">
+              <label htmlFor="incident-file">Attachment (optional)</label>
+              <input
+                id="incident-file"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                disabled={Boolean(editingIncidentId)}
+              />
+              <small>
+                {editingIncidentId
+                  ? 'Attachment update is disabled while editing.'
+                  : file
+                    ? `Selected: ${file.name}`
+                    : 'Supported: image, pdf'}
+              </small>
+            </div>
           </div>
 
-          <div className="inc-field">
-            <label htmlFor="incident-file">Attachment (optional)</label>
-            <input
-              id="incident-file"
-              type="file"
-              accept="image/*,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-          </div>
-
-          <button className="inc-submit-btn" type="submit" disabled={loading}>
-            {loading ? 'Submitting...' : 'Submit Incident'}
+          <button className="incident-submit-btn" type="submit" disabled={loading}>
+            {loading ? (editingIncidentId ? 'Updating...' : 'Submitting...') : editingIncidentId ? 'Update Incident' : 'Submit Incident'}
           </button>
+          {editingIncidentId ? (
+            <button className="incident-submit-btn incident-cancel-btn" type="button" onClick={cancelEdit} disabled={loading}>
+              Cancel
+            </button>
+          ) : null}
         </form>
       </section>
 
-      <section className="dash-card inc-list-card">
-        <div className="inc-section-head">
-          <h3>My Incidents</h3>
-          <p>Latest first. Check current status and technician remarks.</p>
-        </div>
-
+      <section className="dash-card incident-table-card">
+        <h2>My Incidents</h2>
         <div className="dash-table-wrap">
-          <table className="dash-table inc-table">
+          <table className="dash-table">
             <thead>
               <tr>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Resource</th>
                 <th>Remarks</th>
-                <th>Created</th>
+                  <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {incidents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="inc-empty">
-                    No incidents yet.
+                  <td colSpan={5} className="incident-empty-state">
+                    No incidents yet. Submit your first incident above.
                   </td>
                 </tr>
               ) : (
@@ -180,7 +278,30 @@ export default function StudentIncidentsPage() {
                     </td>
                     <td>{item.resourceId?.name || item.resourceId || '-'}</td>
                     <td>{item.technicianRemarks || '-'}</td>
-                    <td>{new Date(item.createdAt).toLocaleString()}</td>
+                    <td>
+                      {String(item.status || '').toLowerCase() === 'pending' ? (
+                        <div className="incident-action-group">
+                          <button
+                            type="button"
+                            className="incident-row-edit-btn"
+                            onClick={() => startEditIncident(item)}
+                            disabled={loading}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="incident-row-delete-btn"
+                            onClick={() => handleDeleteIncident(item)}
+                            disabled={loading}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
