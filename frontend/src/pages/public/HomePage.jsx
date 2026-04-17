@@ -5,7 +5,6 @@ import {
   FaCalendar,
   FaExclamationTriangle,
   FaBell,
-  FaSearch,
   FaCheckCircle,
 } from 'react-icons/fa'
 import '../../styles/HomePage.css'
@@ -108,10 +107,6 @@ function HomePage() {
               Manage your campus life efficiently. Book resources, track incidents, and stay updated with real-time notifications in one place.
             </p>
             <div className="hero-search-bar">
-              <div className="search-input-wrap">
-                <FaSearch className="search-icon" />
-                <input type="text" placeholder="Search facilities or services..." />
-              </div>
               <button className="search-btn" onClick={goStudentSignup}>Get Started</button>
             </div>
           </div>

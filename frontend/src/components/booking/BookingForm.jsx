@@ -31,6 +31,10 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
   const [submitted, setSubmitted] = useState(false)
   const selectedResource = activeResources.find((resource) => resource.id === formData.resourceId)
   const selectedResourceCapacity = Number(selectedResource?.capacity)
+  const parsedAvailabilityWindows = parseAvailabilityWindows(selectedResource?.availabilityWindows)
+  const hasResourceSpecificWindows = parsedAvailabilityWindows.length > 0
+  const timeSlots = getTimeSlotsForResource(parsedAvailabilityWindows)
+  const availabilityLabel = getAvailabilityLabel(parsedAvailabilityWindows)
 
   function handleChange(e) {
     const { name, value } = e.target
@@ -69,13 +73,6 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
   function shouldShowError(fieldName) {
     return Boolean(errors[fieldName] && (submitted || touched[fieldName]))
   }
-
-  const timeSlots = Array.from({ length: 21 }, (_, i) => {
-    const totalMinutes = WORKING_HOUR_START_MINUTES + i * 30
-    const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
-    const mm = String(totalMinutes % 60).padStart(2, '0')
-    return `${hh}:${mm}`
-  })
 
   return (
     <form className="dash-form-grid" onSubmit={handleSubmit} noValidate>
@@ -136,7 +133,7 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
           disabled={submitting}
         >
           <option value="">--:--</option>
-          {timeSlots.map(slot => (
+          {timeSlots.map((slot) => (
             <option key={slot} value={slot}>{slot}</option>
           ))}
         </select>
@@ -153,10 +150,15 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
           disabled={submitting}
         >
           <option value="">--:--</option>
-          {timeSlots.map(slot => (
+          {timeSlots.map((slot) => (
             <option key={slot} value={slot}>{slot}</option>
           ))}
         </select>
+        {selectedResource ? (
+          <small style={{ display: 'block', marginTop: 6, color: 'var(--text-muted)' }}>
+            Available hours: {availabilityLabel}
+          </small>
+        ) : null}
         {shouldShowError('endTime') ? <FieldErrorText>{errors.endTime}</FieldErrorText> : null}
       </div>
       <div>
@@ -173,6 +175,11 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
           onBlur={handleBlur}
           disabled={submitting}
         />
+        {Number.isFinite(selectedResourceCapacity) ? (
+          <small style={{ display: 'block', marginTop: 6, color: 'var(--text-muted)' }}>
+            Capacity: {selectedResourceCapacity}
+          </small>
+        ) : null}
         {shouldShowError('attendees') ? <FieldErrorText>{errors.attendees}</FieldErrorText> : null}
       </div>
       <button type="submit" disabled={submitting || activeResources.length === 0}>
@@ -202,6 +209,8 @@ function validateForm(formData, resources) {
   const validationErrors = {}
   const selectedResource = resources.find((resource) => resource.id === formData.resourceId)
   const resourceCapacity = Number(selectedResource?.capacity)
+  const parsedAvailabilityWindows = parseAvailabilityWindows(selectedResource?.availabilityWindows)
+  const hasResourceSpecificWindows = parsedAvailabilityWindows.length > 0
   const attendees = Number(formData.attendees)
   const purpose = (formData.purpose || '').trim()
   const bookingDate = formData.date ? new Date(`${formData.date}T00:00:00`) : null
@@ -243,7 +252,7 @@ function validateForm(formData, resources) {
   const endMinutes = toMinutes(formData.endTime)
 
   if (startMinutes !== null) {
-    if (startMinutes < WORKING_HOUR_START_MINUTES || startMinutes > WORKING_HOUR_END_MINUTES) {
+    if (!hasResourceSpecificWindows && (startMinutes < WORKING_HOUR_START_MINUTES || startMinutes > WORKING_HOUR_END_MINUTES)) {
       validationErrors.startTime = 'Start time must be between 08:00 and 18:00.'
     } else if (startMinutes % 30 !== 0) {
       validationErrors.startTime = 'Start time must align to 30-minute slots.'
@@ -256,7 +265,7 @@ function validateForm(formData, resources) {
   }
 
   if (endMinutes !== null) {
-    if (endMinutes < WORKING_HOUR_START_MINUTES || endMinutes > WORKING_HOUR_END_MINUTES) {
+    if (!hasResourceSpecificWindows && (endMinutes < WORKING_HOUR_START_MINUTES || endMinutes > WORKING_HOUR_END_MINUTES)) {
       validationErrors.endTime = 'End time must be between 08:00 and 18:00.'
     } else if (endMinutes % 30 !== 0) {
       validationErrors.endTime = 'End time must align to 30-minute slots.'
@@ -266,6 +275,11 @@ function validateForm(formData, resources) {
   if (startMinutes !== null && endMinutes !== null) {
     if (endMinutes <= startMinutes) {
       validationErrors.endTime = 'End time must be later than start time.'
+    } else if (hasResourceSpecificWindows) {
+      const withinWindow = parsedAvailabilityWindows.some((window) => startMinutes >= window.start && endMinutes <= window.end)
+      if (!withinWindow) {
+        validationErrors.endTime = 'Selected time must be within this resource availability window.'
+      }
     } else {
       const duration = endMinutes - startMinutes
       if (duration < MIN_DURATION_MINUTES || duration > MAX_DURATION_MINUTES) {
@@ -289,5 +303,44 @@ function toMinutes(timeValue) {
   if (!timeValue || !/^\d{2}:\d{2}$/.test(timeValue)) return null
   const [hours, minutes] = timeValue.split(':').map(Number)
   return hours * 60 + minutes
+}
+
+function toTimeString(totalMinutes) {
+  const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
+  const mm = String(totalMinutes % 60).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function parseAvailabilityWindows(availabilityWindows) {
+  if (!Array.isArray(availabilityWindows)) return []
+  return availabilityWindows
+    .map((windowText) => {
+      if (typeof windowText !== 'string' || !windowText.includes('-')) return null
+      const [startText, endText] = windowText.split('-').map((part) => part.trim())
+      const start = toMinutes(startText)
+      const end = toMinutes(endText)
+      if (start == null || end == null || end <= start) return null
+      return { start, end }
+    })
+    .filter(Boolean)
+}
+
+function getTimeSlotsForResource(parsedWindows) {
+  if (parsedWindows.length === 0) {
+    return Array.from({ length: 21 }, (_, i) => toTimeString(WORKING_HOUR_START_MINUTES + i * 30))
+  }
+
+  const slotSet = new Set()
+  parsedWindows.forEach((window) => {
+    for (let minute = window.start; minute <= window.end; minute += 30) {
+      slotSet.add(toTimeString(minute))
+    }
+  })
+  return Array.from(slotSet).sort()
+}
+
+function getAvailabilityLabel(parsedWindows) {
+  if (parsedWindows.length === 0) return '08:00 - 18:00'
+  return parsedWindows.map((window) => `${toTimeString(window.start)} - ${toTimeString(window.end)}`).join(', ')
 }
 

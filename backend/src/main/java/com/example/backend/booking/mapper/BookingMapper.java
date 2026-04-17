@@ -37,6 +37,7 @@ public class BookingMapper {
                 booking.getId(),
                 resource != null ? resource.getId() : null,
                 resource != null ? resource.getName() : "Deleted Resource",
+                resource != null ? resource.getLocation() : null,
                 (resource != null && resource.getType() != null) ? resource.getType().name() : null,
                 resource != null ? resolveCategory(resource).name() : null,
                 user != null ? user.getId() : null,

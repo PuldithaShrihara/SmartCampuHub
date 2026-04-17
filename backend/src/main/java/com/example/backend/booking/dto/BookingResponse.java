@@ -11,6 +11,7 @@ public record BookingResponse(
 	String id,
 	String resourceId,
 	String resourceName,
+	String resourceLocation,
 	String resourceType,
 	String resourceCategory,
 	String userId,
