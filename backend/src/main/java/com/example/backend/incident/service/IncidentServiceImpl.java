@@ -154,7 +154,7 @@ public class IncidentServiceImpl implements IncidentService {
 	@Override
 	public IncidentResponseDto updateIncident(String incidentId, IncidentUpdateRequest request, String authenticatedEmail) {
 		User currentUser = requireCurrentUser(authenticatedEmail);
-		requireTechnicianOrAdmin(currentUser);
+		requireTechnicianRole(currentUser);
 
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
@@ -198,6 +198,12 @@ public class IncidentServiceImpl implements IncidentService {
 	private void requireTechnicianOrAdmin(User user) {
 		if (user.getRole() != Role.TECHNICIAN && user.getRole() != Role.ADMIN) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
+		}
+	}
+
+	private void requireTechnicianRole(User user) {
+		if (user.getRole() != Role.TECHNICIAN) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only technicians can update incidents");
 		}
 	}
 
