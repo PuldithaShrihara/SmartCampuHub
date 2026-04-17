@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.backend.common.service.FileStorageService;
 import com.example.backend.incident.dto.IncidentResourceSummaryDto;
 import com.example.backend.incident.dto.IncidentResponseDto;
+import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUserSummaryDto;
 import com.example.backend.incident.entity.Incident;
@@ -81,6 +82,56 @@ public class IncidentServiceImpl implements IncidentService {
 				.stream()
 				.map(incident -> toIncidentData(incident, false, true, false))
 				.toList();
+	}
+
+	@Override
+	public IncidentResponseDto updateMyPendingIncident(String incidentId, IncidentStudentUpdateRequest request,
+			String authenticatedEmail) {
+		User currentUser = requireCurrentUser(authenticatedEmail);
+		requireUserRole(currentUser);
+
+		Incident incident = incidentRepository.findById(incidentId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+		if (!currentUser.getId().equals(incident.getUserId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own incidents");
+		}
+		if (incident.getStatus() != IncidentStatus.PENDING) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending incidents can be updated");
+		}
+
+		if (isBlank(request.getTitle()) || isBlank(request.getDescription()) || isBlank(request.getResourceId())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, and resourceId are required");
+		}
+
+		String resourceId = request.getResourceId().trim();
+		resourceRepository.findById(resourceId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid resourceId"));
+
+		incident.setTitle(request.getTitle().trim());
+		incident.setDescription(request.getDescription().trim());
+		incident.setResourceId(resourceId);
+
+		Incident updated = incidentRepository.save(incident);
+		return toIncidentData(updated, false, true, false);
+	}
+
+	@Override
+	public void deleteMyPendingIncident(String incidentId, String authenticatedEmail) {
+		User currentUser = requireCurrentUser(authenticatedEmail);
+		requireUserRole(currentUser);
+
+		Incident incident = incidentRepository.findById(incidentId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+		if (!currentUser.getId().equals(incident.getUserId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own incidents");
+		}
+		if (incident.getStatus() != IncidentStatus.PENDING) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending incidents can be deleted");
+		}
+
+		incidentRepository.delete(incident);
 	}
 
 	@Override
