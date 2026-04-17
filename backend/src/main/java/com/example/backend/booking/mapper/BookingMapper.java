@@ -6,7 +6,6 @@ import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
 import com.example.backend.booking.entity.Booking;
 import com.example.backend.booking.entity.BookingStatus;
-import com.example.backend.booking.entity.BookingType;
 import com.example.backend.resource.entity.Resource;
 import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.user.entity.User;
@@ -58,7 +57,8 @@ public class BookingMapper {
     }
 
     private ResourceCategory resolveCategory(Resource resource) {
-        if (resource.getCategory() != null) return resource.getCategory();
+        if (resource.getCategory() != null)
+            return resource.getCategory();
         return resource.getType() == com.example.backend.resource.entity.ResourceType.EQUIPMENT
                 ? ResourceCategory.EQUIPMENT
                 : ResourceCategory.SPACE;

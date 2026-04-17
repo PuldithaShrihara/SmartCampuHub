@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.time.Instant;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +19,14 @@ import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.booking.entity.BookingType;
 import com.example.backend.booking.mapper.BookingMapper;
 import com.example.backend.booking.repository.BookingRepository;
+import com.example.backend.mail.EmailService;
 import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.resource.entity.Resource;
 import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.repository.ResourceRepository;
 import com.example.backend.user.entity.User;
 import com.example.backend.user.repository.UserRepository;
+import com.example.backend.util.QRCodeGenerator;
 
 @Service
 public class BookingServiceImpl implements BookingService {
@@ -37,13 +41,15 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final BookingMapper bookingMapper;
+    private final EmailService emailService;
 
     public BookingServiceImpl(BookingRepository bookingRepository, UserRepository userRepository,
-            ResourceRepository resourceRepository, BookingMapper bookingMapper) {
+            ResourceRepository resourceRepository, BookingMapper bookingMapper, EmailService emailService) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
         this.bookingMapper = bookingMapper;
+        this.emailService = emailService;
     }
 
     @Override
@@ -53,6 +59,7 @@ public class BookingServiceImpl implements BookingService {
 
         Resource resource = resourceRepository.findById(request.resourceId())
                 .orElseThrow(() -> new RuntimeException("Resource not found: " + request.resourceId()));
+
         validateCreateBookingRequest(request, resource);
 
         Booking booking = bookingMapper.toEntity(request, user, resource);
@@ -96,11 +103,32 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
 
         booking.setStatus(status);
+
         if (status == BookingStatus.REJECTED) {
             String reason = rejectionReason != null ? rejectionReason.trim() : "";
             booking.setRejectionReason(reason.isEmpty() ? "Rejected by admin" : reason);
         } else {
             booking.setRejectionReason(null);
+        }
+
+        // Logic for QR code generation when approved.
+        // We trigger if it's currently APPROVED and hasn't had a QR generated yet.
+        if (status == BookingStatus.APPROVED && !booking.isQrGenerated()) {
+            try {
+                String token = UUID.randomUUID().toString();
+                String verifyUrl = "http://localhost:3000/verify-booking/" + token;
+
+                byte[] qrImage = QRCodeGenerator.generateQRCodeImage(verifyUrl, 250, 250);
+
+                booking.setQrToken(token);
+                booking.setQrGenerated(true);
+                booking.setQrGeneratedAt(Instant.now());
+
+                emailService.sendBookingApprovalEmail(booking, qrImage);
+                log.info("Generated QR code and sent approval email for booking: {}", bookingId);
+            } catch (Exception e) {
+                log.error("Failed to generate QR or send approval email for booking: {}", bookingId, e);
+            }
         }
 
         Booking updatedBooking = bookingRepository.save(booking);
@@ -199,7 +227,8 @@ public class BookingServiceImpl implements BookingService {
         return startA.isBefore(endB) && endA.isAfter(startB);
     }
 
-    private void validateSpaceBookingRules(BookingRequest request, Resource resource, LocalTime startTime, LocalTime endTime) {
+    private void validateSpaceBookingRules(BookingRequest request, Resource resource, LocalTime startTime,
+            LocalTime endTime) {
         Integer attendees = request.expectedAttendees();
         if (attendees == null || attendees < 1) {
             throw new RuntimeException("Expected attendees must be greater than 0");
@@ -208,16 +237,20 @@ public class BookingServiceImpl implements BookingService {
         if (capacity != null && attendees > capacity) {
             throw new RuntimeException("Expected attendees exceed selected resource capacity");
         }
-        List<Booking> existing = bookingRepository.findByResource_IdAndBookingDate(resource.getId(), request.bookingDate());
+        List<Booking> existing = bookingRepository.findByResource_IdAndBookingDate(resource.getId(),
+                request.bookingDate());
         boolean hasConflict = existing.stream()
-                .filter(booking -> booking.getStatus() != BookingStatus.REJECTED && booking.getStatus() != BookingStatus.CANCELLED)
-                .anyMatch(booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
+                .filter(booking -> booking.getStatus() != BookingStatus.REJECTED
+                        && booking.getStatus() != BookingStatus.CANCELLED)
+                .anyMatch(
+                        booking -> timeRangesOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
         if (hasConflict) {
             throw new RuntimeException("Selected time slot is already booked for this resource");
         }
     }
 
-    private void validateEquipmentBookingRules(BookingRequest request, Resource resource, LocalTime startTime, LocalTime endTime) {
+    private void validateEquipmentBookingRules(BookingRequest request, Resource resource, LocalTime startTime,
+            LocalTime endTime) {
         Integer quantityRequested = request.quantityRequested();
         if (quantityRequested == null || quantityRequested < 1) {
             throw new RuntimeException("Quantity requested must be greater than 0");
@@ -246,7 +279,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private ResourceCategory resolveCategory(Resource resource) {
-        if (resource.getCategory() != null) return resource.getCategory();
+        if (resource.getCategory() != null)
+            return resource.getCategory();
         return resource.getType() == com.example.backend.resource.entity.ResourceType.EQUIPMENT
                 ? ResourceCategory.EQUIPMENT
                 : ResourceCategory.SPACE;
@@ -254,7 +288,9 @@ public class BookingServiceImpl implements BookingService {
 
     private boolean isWithinAvailabilityWindows(Resource resource, LocalTime startTime, LocalTime endTime) {
         List<String> windows = resource.getAvailabilityWindows();
-        if (windows == null || windows.isEmpty()) return true;
+        if (windows == null || windows.isEmpty())
+            return true;
+
         return windows.stream()
                 .map(this::parseWindow)
                 .filter(Objects::nonNull)
@@ -262,14 +298,44 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private TimeWindow parseWindow(String rawWindow) {
-        if (rawWindow == null || !rawWindow.contains("-")) return null;
+        if (rawWindow == null || !rawWindow.contains("-"))
+            return null;
         String[] parts = rawWindow.trim().split("-");
-        if (parts.length != 2) return null;
+        if (parts.length != 2)
+            return null;
         try {
-            return new TimeWindow(LocalTime.parse(parts[0].trim()), LocalTime.parse(parts[1].trim()));
+            LocalTime start = parseTimeFlexible(parts[0].trim());
+            LocalTime end = parseTimeFlexible(parts[1].trim());
+
+            // If end is before start, it might be a 12-hour PM ambiguity (e.g. 8:30 - 5:00)
+            if (end.isBefore(start) && end.getHour() < 12) {
+                end = end.plusHours(12);
+            }
+
+            return new TimeWindow(start, end);
         } catch (Exception ex) {
+            log.warn("Failed to parse availability window: {}", rawWindow);
             return null;
         }
+    }
+
+    private LocalTime parseTimeFlexible(String timeStr) {
+        // Replace dot with colon and normalize spacing
+        String normalized = timeStr.replace(".", ":").trim();
+
+        // Handle cases like "8:30" (missing leading zero)
+        if (normalized.contains(":") && normalized.indexOf(":") == 1) {
+            normalized = "0" + normalized;
+        }
+
+        // Handle cases like "8" or "17" (missing minutes)
+        if (!normalized.contains(":")) {
+            if (normalized.length() == 1)
+                normalized = "0" + normalized;
+            normalized = normalized + ":00";
+        }
+
+        return LocalTime.parse(normalized);
     }
 
     private record TimeWindow(LocalTime start, LocalTime end) {

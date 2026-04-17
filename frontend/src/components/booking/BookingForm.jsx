@@ -70,6 +70,13 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
     return Boolean(errors[fieldName] && (submitted || touched[fieldName]))
   }
 
+  const timeSlots = Array.from({ length: 21 }, (_, i) => {
+    const totalMinutes = WORKING_HOUR_START_MINUTES + i * 30
+    const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
+    const mm = String(totalMinutes % 60).padStart(2, '0')
+    return `${hh}:${mm}`
+  })
+
   return (
     <form className="dash-form-grid" onSubmit={handleSubmit} noValidate>
       <div>
@@ -119,35 +126,37 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
         {shouldShowError('date') ? <FieldErrorText>{errors.date}</FieldErrorText> : null}
       </div>
       <div>
-        <label htmlFor="startTime">Start Time</label>
-        <input
+        <label htmlFor="startTime">Start Time (24h)</label>
+        <select
           id="startTime"
-          type="time"
           name="startTime"
-          min="08:00"
-          max="18:00"
-          step={1800}
           value={formData.startTime}
           onChange={handleChange}
           onBlur={handleBlur}
           disabled={submitting}
-        />
+        >
+          <option value="">--:--</option>
+          {timeSlots.map(slot => (
+            <option key={slot} value={slot}>{slot}</option>
+          ))}
+        </select>
         {shouldShowError('startTime') ? <FieldErrorText>{errors.startTime}</FieldErrorText> : null}
       </div>
       <div>
-        <label htmlFor="endTime">End Time</label>
-        <input
+        <label htmlFor="endTime">End Time (24h)</label>
+        <select
           id="endTime"
-          type="time"
           name="endTime"
-          min="08:00"
-          max="18:00"
-          step={1800}
           value={formData.endTime}
           onChange={handleChange}
           onBlur={handleBlur}
           disabled={submitting}
-        />
+        >
+          <option value="">--:--</option>
+          {timeSlots.map(slot => (
+            <option key={slot} value={slot}>{slot}</option>
+          ))}
+        </select>
         {shouldShowError('endTime') ? <FieldErrorText>{errors.endTime}</FieldErrorText> : null}
       </div>
       <div>
