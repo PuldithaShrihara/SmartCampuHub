@@ -1,9 +1,5 @@
 ﻿export default function AllBookingsPage() {
-  const rows = [
-    { id: 'BK-2001', student: 'Aarav', resource: 'Lecture Hall B', status: 'Approved' },
-    { id: 'BK-2002', student: 'Maya', resource: 'Robotics Lab', status: 'Pending' },
-    { id: 'BK-2003', student: 'Rohit', resource: 'Seminar Room 1', status: 'Rejected' },
-  ]
+ 
 
   return (
     <>

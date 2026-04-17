@@ -1,9 +1,5 @@
 ﻿export default function PendingBookingsPage() {
-  const pendingRows = [
-    { id: 'BK-3011', student: 'Nisha', resource: 'Design Studio', requestedAt: '2026-04-01 10:15' },
-    { id: 'BK-3012', student: 'Karan', resource: 'Computer Lab 3', requestedAt: '2026-04-01 11:20' },
-    { id: 'BK-3013', student: 'Sana', resource: 'Auditorium', requestedAt: '2026-04-01 12:05' },
-  ]
+ 
 
   return (
     <>
