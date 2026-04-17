@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa'
 import { useToast } from '../../components/toastContext.js'
 import {
   fetchResources,
@@ -26,7 +26,7 @@ export default function ResourcesPage() {
   }
   
   const [resources, setResources] = useState([])
-  const [filters, setFilters] = useState({ type: '', capacity: '', location: '' })
+  const [filters, setFilters] = useState({ type: '', capacity: '' })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingResource, setEditingResource] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
@@ -116,10 +116,6 @@ export default function ResourcesPage() {
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value })
-  }
-
-  const handleSearch = () => {
-    loadResources()
   }
 
   const handleOpenModal = (resource = null) => {
@@ -278,19 +274,6 @@ export default function ResourcesPage() {
         </div>
 
         <div className="filters-bar">
-          <div className="filter-group">
-            <label>Location Area</label>
-            <div className="input-with-icon">
-              <FaSearch className="input-icon" />
-              <input 
-                type="text" 
-                name="location" 
-                placeholder="Search location..." 
-                value={filters.location} 
-                onChange={handleFilterChange} 
-              />
-            </div>
-          </div>
           <div className="filter-group">
             <label>Min Capacity</label>
             <input 

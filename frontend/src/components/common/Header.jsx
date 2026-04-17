@@ -1,4 +1,4 @@
-import { FaBell, FaBars, FaSearch } from 'react-icons/fa'
+import { FaBell, FaBars } from 'react-icons/fa'
 import '../../styles/Header.css'
 
 export default function Header({
@@ -21,10 +21,6 @@ export default function Header({
         <button type="button" className="hamburger-btn">
           <FaBars />
         </button>
-        <div className="app-header-search">
-          <FaSearch />
-          <input type="text" placeholder="Search anything..." />
-        </div>
       </div>
 
       <div className="app-header-right">

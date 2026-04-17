@@ -186,6 +186,10 @@ public class BookingServiceImpl implements BookingService {
         LocalTime startTime = request.startTime();
         LocalTime endTime = request.endTime();
 
+        if (!hasValidAvailabilityWindows(resource)) {
+            throw new RuntimeException("Selected resource has no valid availability time slots configured");
+        }
+
         if (startTime.isBefore(WORK_DAY_START) || startTime.isAfter(WORK_DAY_END)) {
             throw new RuntimeException("Start time must be within working hours (08:00 - 18:00)");
         }
@@ -289,12 +293,22 @@ public class BookingServiceImpl implements BookingService {
     private boolean isWithinAvailabilityWindows(Resource resource, LocalTime startTime, LocalTime endTime) {
         List<String> windows = resource.getAvailabilityWindows();
         if (windows == null || windows.isEmpty())
-            return true;
+            return false;
 
         return windows.stream()
                 .map(this::parseWindow)
                 .filter(Objects::nonNull)
                 .anyMatch(window -> !startTime.isBefore(window.start()) && !endTime.isAfter(window.end()));
+    }
+
+    private boolean hasValidAvailabilityWindows(Resource resource) {
+        List<String> windows = resource.getAvailabilityWindows();
+        if (windows == null || windows.isEmpty()) {
+            return false;
+        }
+        return windows.stream()
+                .map(this::parseWindow)
+                .anyMatch(Objects::nonNull);
     }
 
     private TimeWindow parseWindow(String rawWindow) {
