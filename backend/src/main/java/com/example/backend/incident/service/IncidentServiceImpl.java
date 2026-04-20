@@ -3,6 +3,8 @@ package com.example.backend.incident.service;
 import java.time.Instant;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +19,9 @@ import com.example.backend.incident.dto.IncidentUserSummaryDto;
 import com.example.backend.incident.entity.Incident;
 import com.example.backend.incident.entity.IncidentStatus;
 import com.example.backend.incident.repository.IncidentRepository;
+import com.example.backend.notifications.NotificationService;
+import com.example.backend.notifications.NotificationType;
+import com.example.backend.notifications.dto.CreateNotificationRequest;
 import com.example.backend.resource.entity.Resource;
 import com.example.backend.resource.repository.ResourceRepository;
 import com.example.backend.user.entity.Role;
@@ -26,20 +31,25 @@ import com.example.backend.user.repository.UserRepository;
 @Service
 public class IncidentServiceImpl implements IncidentService {
 
+	private static final Logger log = LoggerFactory.getLogger(IncidentServiceImpl.class);
+
 	private final IncidentRepository incidentRepository;
 	private final UserRepository userRepository;
 	private final ResourceRepository resourceRepository;
 	private final FileStorageService fileStorageService;
+	private final NotificationService notificationService;
 
 	public IncidentServiceImpl(
 			IncidentRepository incidentRepository,
 			UserRepository userRepository,
 			ResourceRepository resourceRepository,
-			FileStorageService fileStorageService) {
+			FileStorageService fileStorageService,
+			NotificationService notificationService) {
 		this.incidentRepository = incidentRepository;
 		this.userRepository = userRepository;
 		this.resourceRepository = resourceRepository;
 		this.fileStorageService = fileStorageService;
+		this.notificationService = notificationService;
 	}
 
 	@Override
@@ -70,7 +80,29 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 
 		Incident savedIncident = incidentRepository.save(incident);
+		notifyIncidentSubmitted(currentUser.getEmail(), savedIncident.getTitle());
 		return toIncidentData(savedIncident, false, true, false);
+	}
+
+	private void notifyIncidentSubmitted(String studentEmail, String incidentTitle) {
+		if (isBlank(studentEmail)) {
+			return;
+		}
+		String shortTitle = incidentTitle == null ? "" : incidentTitle.trim();
+		if (shortTitle.length() > 120) {
+			shortTitle = shortTitle.substring(0, 117) + "...";
+		}
+		String message = shortTitle.isEmpty()
+				? "Your incident report was submitted successfully. You can track it under Incidents."
+				: "Incident submitted successfully: \"" + shortTitle + "\". You can track it under Incidents.";
+		try {
+			notificationService.createForUser(new CreateNotificationRequest(
+					message,
+					studentEmail.trim(),
+					NotificationType.TICKET));
+		} catch (Exception ex) {
+			log.warn("Could not create submission notification for incident: {}", ex.getMessage());
+		}
 	}
 
 	@Override
@@ -154,30 +186,44 @@ public class IncidentServiceImpl implements IncidentService {
 	@Override
 	public IncidentResponseDto updateIncident(String incidentId, IncidentUpdateRequest request, String authenticatedEmail) {
 		User currentUser = requireCurrentUser(authenticatedEmail);
-		requireTechnicianRole(currentUser);
 
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
 
-		if (request.getStatus() != null) {
-			incident.setStatus(parseStatus(request.getStatus()));
-		}
-		if (request.getTechnicianRemarks() != null) {
-			incident.setTechnicianRemarks(request.getTechnicianRemarks().trim());
-		}
-		if (request.getAssignedTo() != null) {
-			String assignedTo = request.getAssignedTo().trim();
-			if (!assignedTo.isEmpty()) {
-				userRepository.findById(assignedTo)
-						.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid assignedTo user id"));
-				incident.setAssignedTo(assignedTo);
-			} else {
-				incident.setAssignedTo(null);
+		if (currentUser.getRole() == Role.ADMIN) {
+			if (request.getAssignedTo() != null) {
+				applyAssignedTechnician(incident, request.getAssignedTo());
 			}
+		} else if (currentUser.getRole() == Role.TECHNICIAN) {
+			if (request.getStatus() != null) {
+				incident.setStatus(parseStatus(request.getStatus()));
+			}
+			if (request.getTechnicianRemarks() != null) {
+				incident.setTechnicianRemarks(request.getTechnicianRemarks().trim());
+			}
+			if (request.getAssignedTo() != null) {
+				applyAssignedTechnician(incident, request.getAssignedTo());
+			}
+		} else {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
 		}
 
 		Incident saved = incidentRepository.save(incident);
 		return toIncidentData(saved, true, true, true);
+	}
+
+	private void applyAssignedTechnician(Incident incident, String assignedToRaw) {
+		String assignedTo = assignedToRaw.trim();
+		if (assignedTo.isEmpty()) {
+			incident.setAssignedTo(null);
+			return;
+		}
+		User assignee = userRepository.findById(assignedTo)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid assignedTo user id"));
+		if (assignee.getRole() != Role.TECHNICIAN) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incidents can only be assigned to technicians");
+		}
+		incident.setAssignedTo(assignedTo);
 	}
 
 	private User requireCurrentUser(String authenticatedEmail) {
@@ -198,12 +244,6 @@ public class IncidentServiceImpl implements IncidentService {
 	private void requireTechnicianOrAdmin(User user) {
 		if (user.getRole() != Role.TECHNICIAN && user.getRole() != Role.ADMIN) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
-		}
-	}
-
-	private void requireTechnicianRole(User user) {
-		if (user.getRole() != Role.TECHNICIAN) {
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only technicians can update incidents");
 		}
 	}
 
