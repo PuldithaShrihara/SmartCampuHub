@@ -77,6 +77,7 @@ export default function AdminDashboard() {
         <Header
           title="Admin Dashboard"
           userName={user?.fullName}
+          userRole={user?.role || 'ADMIN'}
           unreadNotifications={unreadNotifications}
           onNotificationClick={() => navigate('/admin/notifications')}
           onLogout={handleLogout}

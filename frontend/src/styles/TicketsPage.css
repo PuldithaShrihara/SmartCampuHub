@@ -101,12 +101,23 @@
 }
 
 .tickets-filter select,
-.tickets-status-cell select {
+.tickets-status-cell select,
+.tickets-assign-select {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 13px;
   background: #fff;
+}
+
+.tickets-assign-select {
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.tickets-assign-select:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .tickets-meta {

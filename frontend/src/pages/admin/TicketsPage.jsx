@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getAllIncidents } from '../../api/incidentApi.js'
+import { adminListTechnicians } from '../../api/auth.js'
+import { getAllIncidents, updateIncident } from '../../api/incidentApi.js'
 import '../../styles/TicketsPage.css'
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
@@ -27,8 +28,10 @@ function getStatusCounts(incidents) {
 export default function Tickets() {
   const [statusFilter, setStatusFilter] = useState('')
   const [incidents, setIncidents] = useState([])
+  const [technicians, setTechnicians] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [assigningId, setAssigningId] = useState('')
   const statusCounts = getStatusCounts(incidents)
 
   async function loadIncidents() {
@@ -47,6 +50,36 @@ export default function Tickets() {
   useEffect(() => {
     loadIncidents()
   }, [statusFilter])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await adminListTechnicians()
+        if (!cancelled) {
+          setTechnicians(Array.isArray(list) ? list : [])
+        }
+      } catch {
+        if (!cancelled) setTechnicians([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function handleAssignTechnician(incidentId, technicianUserId) {
+    try {
+      setAssigningId(incidentId)
+      setError('')
+      await updateIncident(incidentId, { assignedTo: technicianUserId })
+      await loadIncidents()
+    } catch (err) {
+      setError(err.message || 'Could not assign technician')
+    } finally {
+      setAssigningId('')
+    }
+  }
 
   return (
     <div className="tickets-page">
@@ -99,30 +132,55 @@ export default function Tickets() {
               <th>User</th>
               <th>Resource</th>
               <th>Status</th>
+              <th>Assigned technician</th>
               <th>Technician Remarks</th>
             </tr>
           </thead>
           <tbody>
             {incidents.length === 0 ? (
               <tr>
-                <td colSpan={5} className="tickets-empty-state">
+                <td colSpan={6} className="tickets-empty-state">
                   No incidents found.
                 </td>
               </tr>
             ) : (
-              incidents.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.title}</td>
-                  <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
-                  <td>{item.resourceId?.name || '-'}</td>
-                  <td>
-                    <div className="tickets-status-cell">
-                      <span className={statusClass(item.status)}>{item.status}</span>
-                    </div>
-                  </td>
-                  <td>{item.technicianRemarks || '-'}</td>
-                </tr>
-              ))
+              incidents.map((item) => {
+                const assignedId =
+                  typeof item.assignedTo === 'object' && item.assignedTo?.id
+                    ? item.assignedTo.id
+                    : typeof item.assignedTo === 'string'
+                      ? item.assignedTo
+                      : ''
+                return (
+                  <tr key={item.id}>
+                    <td>{item.title}</td>
+                    <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
+                    <td>{item.resourceId?.name || '-'}</td>
+                    <td>
+                      <div className="tickets-status-cell">
+                        <span className={statusClass(item.status)}>{item.status}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <select
+                        className="tickets-assign-select"
+                        value={assignedId}
+                        disabled={assigningId === item.id}
+                        onChange={(e) => handleAssignTechnician(item.id, e.target.value)}
+                        aria-label={`Assign technician for ${item.title}`}
+                      >
+                        <option value="">Unassigned</option>
+                        {technicians.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.fullName || t.email}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{item.technicianRemarks || '-'}</td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
