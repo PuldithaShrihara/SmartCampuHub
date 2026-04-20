@@ -33,6 +33,10 @@
     gap: 24px;
 }
 
+.stats-grid--four {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
 .home-sections {
     display: grid;
     grid-template-columns: 2fr 1fr;
