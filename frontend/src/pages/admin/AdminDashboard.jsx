@@ -6,6 +6,7 @@ import {
   FaCog,
   FaHome,
   FaHourglassHalf,
+  FaQrcode,
   FaTicketAlt,
   FaUsers,
   FaBuilding,
@@ -23,6 +24,7 @@ import Notifications from './Notifications.jsx'
 import StatisticsPage from './StatisticsPage.jsx'
 import SettingsPage from './SettingsPage.jsx'
 import VenueAnalysisPage from './VenueAnalysisPage.jsx'
+import ScanQrPage from './ScanQrPage.jsx'
 import { getUnreadNotificationCount } from '../../api/notifications.js'
 import '../../styles/StudentDashboard.css'
 
@@ -38,6 +40,7 @@ export default function AdminDashboard() {
     { label: 'All Tickets', icon: FaTicketAlt, path: '/admin/tickets' },
     { label: 'Users', icon: FaUsers, path: '/admin/users' },
     { label: 'Statistics', icon: FaChartBar, path: '/admin/statistics' },
+    { label: 'Scan QR', icon: FaQrcode, path: '/admin/scan-qr' },
     { label: 'Settings', icon: FaCog, path: '/admin/settings' },
   ]
 
@@ -91,6 +94,7 @@ export default function AdminDashboard() {
             <Route path="users" element={<UsersPage />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="statistics" element={<StatisticsPage />} />
+            <Route path="scan-qr" element={<ScanQrPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="analysis/:venueId" element={<VenueAnalysisPage />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
