@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
+import { useToast } from '../../components/toastContext.js'
 import '../../styles/StudentIncidentsPage.css'
 
 function statusClass(status) {
@@ -24,6 +25,8 @@ function getStatusCounts(incidents) {
 }
 
 export default function StudentIncidentsPage() {
+  const { pushToast } = useToast()
+  const incidentsListRef = useRef(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [resourceId, setResourceId] = useState('')
@@ -85,21 +88,38 @@ export default function StudentIncidentsPage() {
           description: description.trim(),
           resourceId: resourceId.trim(),
         })
+        setTitle('')
+        setDescription('')
+        setResourceId('')
+        setFile(null)
+        setEditingIncidentId(null)
+        setMessage('Incident updated successfully.')
       } else {
-        await createIncident({
+        const response = await createIncident({
           title: title.trim(),
           description: description.trim(),
           resourceId: resourceId.trim(),
           file,
         })
+        if (response?.success !== true) {
+          throw new Error(response?.message || 'Could not submit incident')
+        }
+        pushToast({
+          type: 'success',
+          message: 'Incident submitted successfully! Your issue has been reported and is now pending review.',
+        })
+        window.dispatchEvent(new Event('notifications:changed'))
+        setTitle('')
+        setDescription('')
+        setResourceId('')
+        setFile(null)
+        setEditingIncidentId(null)
+        setMessage('Incident submitted successfully.')
       }
-      setTitle('')
-      setDescription('')
-      setResourceId('')
-      setFile(null)
-      setEditingIncidentId(null)
-      setMessage(editingIncidentId ? 'Incident updated successfully.' : 'Incident submitted successfully.')
       await loadMyIncidents()
+      if (!editingIncidentId) {
+        incidentsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     } catch (err) {
       setError(err.message || (editingIncidentId ? 'Could not update incident' : 'Could not submit incident'))
     } finally {
@@ -248,7 +268,7 @@ export default function StudentIncidentsPage() {
         </form>
       </section>
 
-      <section className="dash-card incident-table-card">
+      <section ref={incidentsListRef} className="dash-card incident-table-card">
         <h2>My Incidents</h2>
         <div className="dash-table-wrap">
           <table className="dash-table">

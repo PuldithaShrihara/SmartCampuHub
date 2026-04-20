@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const WORKING_HOUR_START_MINUTES = 8 * 60
 const WORKING_HOUR_END_MINUTES = 18 * 60
@@ -6,16 +6,17 @@ const MIN_DURATION_MINUTES = 30
 const MAX_DURATION_MINUTES = 4 * 60
 const PURPOSE_REGEX = /^[A-Za-z0-9\s.,!?()'"&:/-]+$/
 
-export default function BookingForm({ onSubmit, resources = [], submitting = false, initialResourceId = '' }) {
-  const activeResources = resources.filter(
-    (resource) => {
-      const status = String(resource?.status || '').trim().toUpperCase()
-      const category = String(resource?.category || '').trim().toUpperCase()
-      const type = String(resource?.type || '').trim().toUpperCase()
-      // Backward compatible: if category is missing, treat non-EQUIPMENT types as SPACE.
-      const isSpaceResource = category ? category === 'SPACE' : type !== 'EQUIPMENT'
-      return status === 'ACTIVE' && isSpaceResource
-    },
+export default function BookingForm({ onSubmit, resources = [], submitting = false, initialResourceId }) {
+  const activeResources = useMemo(
+    () =>
+      resources.filter((resource) => {
+        const status = String(resource?.status || '').trim().toUpperCase()
+        const category = String(resource?.category || '').trim().toUpperCase()
+        const type = String(resource?.type || '').trim().toUpperCase()
+        const isSpaceResource = category ? category === 'SPACE' : type !== 'EQUIPMENT'
+        return status === 'ACTIVE' && isSpaceResource
+      }),
+    [resources],
   )
   const todayIso = new Date().toISOString().split('T')[0]
   const [formData, setFormData] = useState({
@@ -29,8 +30,20 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
   const [submitted, setSubmitted] = useState(false)
-  const appliedPrefillForIdRef = useRef(null)
-  const selectedResource = activeResources.find((resource) => resource.id === formData.resourceId)
+
+  useEffect(() => {
+    if (initialResourceId == null || initialResourceId === '') return
+    const match = activeResources.find((resource) => String(resource.id) === String(initialResourceId))
+    if (!match) return
+    setFormData((prev) => {
+      if (String(prev.resourceId) === String(match.id)) return prev
+      return { ...prev, resourceId: String(match.id) }
+    })
+  }, [initialResourceId, activeResources])
+
+  const selectedResource = activeResources.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const selectedResourceCapacity = Number(selectedResource?.capacity)
   const parsedAvailabilityWindows = parseAvailabilityWindows(selectedResource?.availabilityWindows)
   const hasResourceSpecificWindows = parsedAvailabilityWindows.length > 0
@@ -75,31 +88,6 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
     return Boolean(errors[fieldName] && (submitted || touched[fieldName]))
   }
 
-  useEffect(() => {
-    const id = String(initialResourceId || '').trim()
-    if (!id) {
-      appliedPrefillForIdRef.current = null
-      return
-    }
-    if (appliedPrefillForIdRef.current === id) return
-
-    const resource = activeResources.find((r) => r.id === id)
-    if (!resource) return
-
-    appliedPrefillForIdRef.current = id
-    const defaults = getDefaultSlotPair(resource)
-    setFormData((prev) => {
-      const next = {
-        ...prev,
-        resourceId: id,
-        startTime: defaults.start || prev.startTime,
-        endTime: defaults.end || prev.endTime,
-      }
-      setErrors(validateForm(next, activeResources))
-      return next
-    })
-  }, [initialResourceId, activeResources])
-
   return (
     <form className="dash-form-grid" onSubmit={handleSubmit} noValidate>
       <div>
@@ -114,7 +102,7 @@ export default function BookingForm({ onSubmit, resources = [], submitting = fal
         >
           <option value="">Select a resource</option>
           {activeResources.map((resource) => (
-            <option key={resource.id} value={resource.id}>
+            <option key={resource.id} value={String(resource.id)}>
               {resource.name || 'Unnamed Resource'} ({resource.location || 'No location'})
             </option>
           ))}
@@ -233,7 +221,9 @@ function FieldErrorText({ children }) {
 
 function validateForm(formData, resources) {
   const validationErrors = {}
-  const selectedResource = resources.find((resource) => resource.id === formData.resourceId)
+  const selectedResource = resources.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const resourceCapacity = Number(selectedResource?.capacity)
   const parsedAvailabilityWindows = parseAvailabilityWindows(selectedResource?.availabilityWindows)
   const hasResourceSpecificWindows = parsedAvailabilityWindows.length > 0
@@ -368,26 +358,5 @@ function getTimeSlotsForResource(parsedWindows) {
 function getAvailabilityLabel(parsedWindows) {
   if (parsedWindows.length === 0) return '08:00 - 18:00'
   return parsedWindows.map((window) => `${toTimeString(window.start)} - ${toTimeString(window.end)}`).join(', ')
-}
-
-/** First valid start/end pair inside availability (≥30 min), for grid → form prefill */
-function getDefaultSlotPair(resource) {
-  const parsed = parseAvailabilityWindows(resource?.availabilityWindows)
-  const slots = getTimeSlotsForResource(parsed)
-  if (slots.length < 2) return { start: '', end: '' }
-
-  const start = slots[0]
-  const startM = toMinutes(start)
-  if (startM == null) return { start: '', end: '' }
-
-  for (let i = 1; i < slots.length; i++) {
-    const end = slots[i]
-    const endM = toMinutes(end)
-    if (endM == null || endM - startM < MIN_DURATION_MINUTES) continue
-    const within = parsed.some((w) => startM >= w.start && endM <= w.end)
-    if (within) return { start, end }
-  }
-
-  return { start: slots[0], end: slots[1] }
 }
 

@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const PURPOSE_REGEX = /^[A-Za-z0-9\s.,!?()'"&:/-]+$/
 
-export default function CreateEquipmentBookingForm({ resources = [], submitting = false, onSubmit }) {
+export default function CreateEquipmentBookingForm({ resources = [], submitting = false, onSubmit, initialResourceId }) {
   const [formData, setFormData] = useState({
     resourceId: '',
     bookingDate: new Date().toISOString().split('T')[0],
@@ -16,16 +16,32 @@ export default function CreateEquipmentBookingForm({ resources = [], submitting 
   const [touched, setTouched] = useState({})
   const [submitted, setSubmitted] = useState(false)
 
-  const activeEquipment = resources.filter(
-    (resource) => {
-      const status = String(resource?.status || '').trim().toUpperCase()
-      const category = String(resource?.category || '').trim().toUpperCase()
-      const type = String(resource?.type || '').trim().toUpperCase()
-      const isEquipment = category ? category === 'EQUIPMENT' : type === 'EQUIPMENT'
-      return status === 'ACTIVE' && isEquipment
-    },
+  const activeEquipment = useMemo(
+    () =>
+      resources.filter((resource) => {
+        const status = String(resource?.status || '').trim().toUpperCase()
+        const category = String(resource?.category || '').trim().toUpperCase()
+        const type = String(resource?.type || '').trim().toUpperCase()
+        const isEquipment = category ? category === 'EQUIPMENT' : type === 'EQUIPMENT'
+        return status === 'ACTIVE' && isEquipment
+      }),
+    [resources],
   )
-  const selectedResource = activeEquipment.find((resource) => resource.id === formData.resourceId)
+  useEffect(() => {
+    if (initialResourceId == null || initialResourceId === '') return
+    const match = activeEquipment.find((resource) => String(resource.id) === String(initialResourceId))
+    if (!match) return
+    setFormData((prev) => {
+      if (String(prev.resourceId) === String(match.id)) return prev
+      const next = { ...prev, resourceId: String(match.id) }
+      setErrors(validateEquipmentForm(next, activeEquipment))
+      return next
+    })
+  }, [initialResourceId, activeEquipment])
+
+  const selectedResource = activeEquipment.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const selectedQuantity = Number(selectedResource?.quantity)
   const todayIso = new Date().toISOString().split('T')[0]
 
@@ -69,7 +85,7 @@ export default function CreateEquipmentBookingForm({ resources = [], submitting 
         <select id="resourceId" name="resourceId" value={formData.resourceId} onChange={handleChange} onBlur={handleBlur} disabled={submitting}>
           <option value="">Select equipment</option>
           {activeEquipment.map((resource) => (
-            <option key={resource.id} value={resource.id}>
+            <option key={resource.id} value={String(resource.id)}>
               {resource.name || 'Unnamed Equipment'} ({resource.location || 'No location'})
             </option>
           ))}
@@ -129,7 +145,9 @@ export default function CreateEquipmentBookingForm({ resources = [], submitting 
 
 function validateEquipmentForm(formData, resources) {
   const validationErrors = {}
-  const selectedResource = resources.find((resource) => resource.id === formData.resourceId)
+  const selectedResource = resources.find(
+    (resource) => String(resource.id) === String(formData.resourceId),
+  )
   const quantity = Number(formData.quantityRequested)
   const purpose = (formData.purpose || '').trim()
   const notes = (formData.notes || '').trim()
