@@ -5,6 +5,7 @@ import CreateEquipmentBookingForm from '../../components/booking/CreateEquipment
 import Modal from '../../components/common/Modal.jsx'
 import { createEquipmentBooking, createSpaceBooking, getMyBookings } from '../../api/bookingApi.js'
 import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
+import './MyBookingsPage.css'
 
 export default function MyBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -128,15 +129,15 @@ export default function MyBookingsPage() {
 
   return (
     <>
-      <section className="dash-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 16 }}>
-          <div>
+      <section className="dash-card bookings-shell">
+        <div className="bookings-header">
+          <div className="bookings-header-copy">
             <h2>My Bookings</h2>
-            <p style={{ color: 'var(--text-muted)' }}>
+            <p className="bookings-header-subtitle">
               Review all your booking requests and track their approval status.
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="bookings-header-actions">
             <button
               type="button"
               onClick={() => setShowCreateForm(true)}
@@ -155,7 +156,7 @@ export default function MyBookingsPage() {
           {!bookingCategory ? (
             <BookingCategorySelector onSelect={setBookingCategory} disabled={submittingBooking} />
           ) : (
-            <div style={{ marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div className="booking-type-toolbar">
               <span className="dash-badge badge-pending">
                 {bookingCategory === 'SPACE' ? 'Labs / Lectures' : 'Equipments'}
               </span>
@@ -185,22 +186,15 @@ export default function MyBookingsPage() {
           ) : null}
         </Modal>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-            gap: 12,
-            marginTop: 8,
-          }}
-        >
-          <StatCard title="Total Bookings" value={totalBookings} bg="#f1f5ff" />
-          <StatCard title="Pending" value={pendingCount} bg="#fff8e8" />
-          <StatCard title="Approved" value={approvedCount} bg="#ebfdf7" />
-          <StatCard title="Rejected" value={rejectedCount} bg="#fff1f1" />
-          <StatCard title="Cancelled" value={cancelledCount} bg="#f3f4f6" />
+        <div className="bookings-stat-grid">
+          <StatCard title="Total Bookings" value={totalBookings} tone="total" />
+          <StatCard title="Pending" value={pendingCount} tone="pending" />
+          <StatCard title="Approved" value={approvedCount} tone="approved" />
+          <StatCard title="Rejected" value={rejectedCount} tone="rejected" />
+          <StatCard title="Cancelled" value={cancelledCount} tone="cancelled" />
         </div>
 
-        <div style={{ display: 'flex', gap: 20, marginTop: 20, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+        <div className="bookings-tabs">
           {[
             { id: 'ALL', label: 'All Bookings' },
             { id: 'EQUIPMENT', label: 'Equipment Bookings' },
@@ -210,15 +204,7 @@ export default function MyBookingsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-muted)',
-                borderBottom: activeTab === tab.id ? '3px solid var(--accent)' : '3px solid transparent',
-                paddingBottom: 8,
-                cursor: 'pointer',
-              }}
+              className={`bookings-tab-btn${activeTab === tab.id ? ' active' : ''}`}
             >
               {tab.label}
             </button>
@@ -226,8 +212,8 @@ export default function MyBookingsPage() {
         </div>
 
         {(activeTab === 'ALL' || activeTab === 'SPACE') && (
-          <div style={{ marginTop: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>Labs / Lecture Halls Bookings</h3>
+          <div className="bookings-table-section">
+            <h3 className="bookings-table-title">Labs / Lecture Halls Bookings</h3>
             {loading ? (
               <p>Loading bookings...</p>
             ) : error ? (
@@ -235,11 +221,11 @@ export default function MyBookingsPage() {
                 Failed to load bookings: {error}. Please ensure the backend server is running.
               </div>
             ) : spaceBookings.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', padding: '20px 0', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: 12 }}>
+              <p className="bookings-empty">
                 No labs/lectures bookings to show yet.
               </p>
             ) : (
-              <div className="dash-table-wrap">
+              <div className="dash-table-wrap bookings-table-wrap">
                 <table className="dash-table">
                   <thead>
                     <tr>
@@ -280,8 +266,8 @@ export default function MyBookingsPage() {
         )}
 
         {(activeTab === 'ALL' || activeTab === 'EQUIPMENT') && (
-          <div style={{ marginTop: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>Equipment Bookings</h3>
+          <div className="bookings-table-section">
+            <h3 className="bookings-table-title">Equipment Bookings</h3>
             {loading ? (
               <p>Loading bookings...</p>
             ) : error ? (
@@ -289,14 +275,14 @@ export default function MyBookingsPage() {
                 Failed to load bookings: {error}. Please ensure the backend server is running.
               </div>
             ) : equipmentBookings.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', padding: '20px 0', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: 12 }}>
-                <p style={{ marginBottom: 8 }}>No equipment bookings yet</p>
+              <div className="bookings-empty">
+                <p className="bookings-empty-caption">No equipment bookings yet</p>
                 <button type="button" className="dash-btn-outline" onClick={() => setShowCreateForm(true)}>
                   Book Equipment
                 </button>
               </div>
             ) : (
-              <div className="dash-table-wrap">
+              <div className="dash-table-wrap bookings-table-wrap">
                 <table className="dash-table">
                   <thead>
                     <tr>
@@ -357,11 +343,11 @@ function resolveBookingCategory(booking) {
   return 'SPACE'
 }
 
-function StatCard({ title, value, bg }) {
+function StatCard({ title, value, tone }) {
   return (
-    <div style={{ background: bg, borderRadius: 14, padding: '14px 16px' }}>
-      <div style={{ color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{String(value).padStart(2, '0')}</div>
+    <div className={`booking-stat-card ${tone || ''}`}>
+      <div className="booking-stat-title">{title}</div>
+      <div className="booking-stat-value">{String(value).padStart(2, '0')}</div>
     </div>
   )
 }

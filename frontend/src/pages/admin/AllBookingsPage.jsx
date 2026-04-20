@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { deleteBooking, getAllBookings, updateBookingStatus } from '../../api/bookingApi.js'
+import '../student/MyBookingsPage.css'
+import './AllBookingsPage.css'
 
 export default function AllBookingsPage() {
   const [bookings, setBookings] = useState([])
@@ -187,7 +189,7 @@ export default function AllBookingsPage() {
   }
 
   return (
-    <section className="dash-card">
+    <section className="dash-card bookings-shell">
       <style>{`
           @media print {
             .no-print,
@@ -225,23 +227,18 @@ export default function AllBookingsPage() {
           }
         `}</style>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <h2 style={{ marginBottom: 8 }}>All Bookings</h2>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+      <div className="bookings-header all-bookings-header">
+        <div className="bookings-header-copy">
+          <h2>All Bookings</h2>
+          <p className="bookings-header-subtitle">
             Review and manage all booking requests across the campus.
           </p>
         </div>
-        <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        <div className="no-print bookings-header-actions">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: '#fff',
-            }}
+            className="all-bookings-filter-select"
           >
             <option value="ALL">All Statuses</option>
             <option value="PENDING">PENDING</option>
@@ -268,22 +265,15 @@ export default function AllBookingsPage() {
         <div className="dash-msg error">{error}</div>
       ) : (
         <>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-              gap: 12,
-              marginTop: 8,
-            }}
-          >
-            <StatCard title="Total Bookings" value={totalBookings} bg="#f1f5ff" />
-            <StatCard title="Pending" value={pendingCount} bg="#fff8e8" />
-            <StatCard title="Approved" value={approvedCount} bg="#ebfdf7" />
-            <StatCard title="Rejected" value={rejectedCount} bg="#fff1f1" />
-            <StatCard title="Cancelled" value={cancelledCount} bg="#f3f4f6" />
+          <div className="bookings-stat-grid">
+            <StatCard title="Total Bookings" value={totalBookings} tone="total" />
+            <StatCard title="Pending" value={pendingCount} tone="pending" />
+            <StatCard title="Approved" value={approvedCount} tone="approved" />
+            <StatCard title="Rejected" value={rejectedCount} tone="rejected" />
+            <StatCard title="Cancelled" value={cancelledCount} tone="cancelled" />
           </div>
 
-          <div style={{ display: 'flex', gap: 20, marginTop: 20, borderBottom: '1px solid var(--border)', paddingBottom: 8, flexWrap: 'wrap' }}>
+          <div className="bookings-tabs">
             {[
               { id: 'ALL', label: 'All Bookings' },
               { id: 'EQUIPMENT', label: 'Equipment Bookings' },
@@ -293,15 +283,7 @@ export default function AllBookingsPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  fontWeight: activeTab === tab.id ? 700 : 500,
-                  color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-muted)',
-                  borderBottom: activeTab === tab.id ? '3px solid var(--accent)' : '3px solid transparent',
-                  paddingBottom: 8,
-                  cursor: 'pointer',
-                }}
+                className={`bookings-tab-btn${activeTab === tab.id ? ' active' : ''}`}
               >
                 {tab.label}
               </button>
@@ -309,22 +291,14 @@ export default function AllBookingsPage() {
           </div>
 
           {(activeTab === 'ALL' || activeTab === 'SPACE') && (
-            <div style={{ marginTop: 24 }}>
-              <h3 style={{ marginBottom: 16 }}>Labs / Lecture Halls Bookings</h3>
+            <div className="bookings-table-section">
+              <h3 className="bookings-table-title">Labs / Lecture Halls Bookings</h3>
               {spaceBookings.length === 0 ? (
-                <p
-                  style={{
-                    color: 'var(--text-muted)',
-                    padding: '20px 0',
-                    textAlign: 'center',
-                    border: '1px dashed var(--border)',
-                    borderRadius: 12,
-                  }}
-                >
+                <p className="bookings-empty">
                   No labs/lectures bookings to show{statusFilter !== 'ALL' ? ' for this filter' : ''}.
                 </p>
               ) : (
-                <div className="dash-table-wrap">
+                <div className="dash-table-wrap bookings-table-wrap">
                   <table className="dash-table">
                     <thead>
                       <tr>
@@ -365,22 +339,14 @@ export default function AllBookingsPage() {
           )}
 
           {(activeTab === 'ALL' || activeTab === 'EQUIPMENT') && (
-            <div style={{ marginTop: 24 }}>
-              <h3 style={{ marginBottom: 16 }}>Equipment Bookings</h3>
+            <div className="bookings-table-section">
+              <h3 className="bookings-table-title">Equipment Bookings</h3>
               {equipmentBookings.length === 0 ? (
-                <div
-                  style={{
-                    color: 'var(--text-muted)',
-                    padding: '20px 0',
-                    textAlign: 'center',
-                    border: '1px dashed var(--border)',
-                    borderRadius: 12,
-                  }}
-                >
-                  <p style={{ margin: 0 }}>No equipment bookings yet{statusFilter !== 'ALL' ? ' for this filter' : ''}.</p>
+                <div className="bookings-empty">
+                  <p className="all-bookings-empty-caption">No equipment bookings yet{statusFilter !== 'ALL' ? ' for this filter' : ''}.</p>
                 </div>
               ) : (
-                <div className="dash-table-wrap">
+                <div className="dash-table-wrap bookings-table-wrap">
                   <table className="dash-table">
                     <thead>
                       <tr>
@@ -452,11 +418,11 @@ function resolveBookingCategory(booking) {
   return 'SPACE'
 }
 
-function StatCard({ title, value, bg }) {
+function StatCard({ title, value, tone }) {
   return (
-    <div style={{ background: bg, borderRadius: 14, padding: '14px 16px' }}>
-      <div style={{ color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{String(value).padStart(2, '0')}</div>
+    <div className={`booking-stat-card ${tone || ''}`}>
+      <div className="booking-stat-title">{title}</div>
+      <div className="booking-stat-value">{String(value).padStart(2, '0')}</div>
     </div>
   )
 }

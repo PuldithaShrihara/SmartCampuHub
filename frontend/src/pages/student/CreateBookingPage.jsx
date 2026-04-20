@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import BookingCategorySelector from '../../components/booking/BookingCategorySelector.jsx'
 import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingForm.jsx'
 import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
@@ -9,6 +9,8 @@ import { useToast } from '../../components/toastContext.js'
 
 export default function CreateBookingPage() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const preselectedResourceId = String(location.state?.preselectedResourceId || '').trim()
   const { pushToast } = useToast()
   const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
@@ -67,6 +69,7 @@ export default function CreateBookingPage() {
       setSubmitting(true)
       await createSpaceBooking(payload)
       pushToast({ type: 'success', message: 'Space booking request created successfully.' })
+      navigate('/student/bookings', { replace: true })
     } catch (err) {
       pushToast({ type: 'error', message: err?.message || 'Failed to create space booking.' })
     } finally {
@@ -79,6 +82,7 @@ export default function CreateBookingPage() {
       setSubmitting(true)
       await createEquipmentBooking(payload)
       pushToast({ type: 'success', message: 'Equipment booking request created successfully.' })
+      navigate('/student/bookings', { replace: true })
     } catch (err) {
       pushToast({ type: 'error', message: err?.message || 'Failed to create equipment booking.' })
     } finally {
@@ -86,10 +90,24 @@ export default function CreateBookingPage() {
     }
   }
 
+  function handleBack() {
+    navigate(-1)
+  }
+
   return (
     <>
       <section className="dash-card">
-        <h2>Create Booking</h2>
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className="dash-btn-outline"
+            onClick={handleBack}
+            aria-label="Go back"
+          >
+            ← Back
+          </button>
+        </div>
+        <h2 style={{ marginTop: 0 }}>Create Booking</h2>
         <p style={{ color: 'var(--text-muted)' }}>
           Submit bookings only for resources created by admins.
         </p>
@@ -120,7 +138,13 @@ export default function CreateBookingPage() {
             No active {bookingCategory === 'SPACE' ? 'space resources' : 'equipment resources'} are available right now.
           </p>
         ) : bookingCategory === 'SPACE' ? (
-          <CreateSpaceBookingForm resources={resources} submitting={submitting} onSubmit={handleCreateSpaceBooking} />
+          <CreateSpaceBookingForm
+            key={preselectedResourceId || 'space-booking'}
+            resources={resources}
+            submitting={submitting}
+            onSubmit={handleCreateSpaceBooking}
+            initialResourceId={preselectedResourceId}
+          />
         ) : bookingCategory === 'EQUIPMENT' ? (
           <CreateEquipmentBookingForm resources={resources} submitting={submitting} onSubmit={handleCreateEquipmentBooking} />
         ) : null}

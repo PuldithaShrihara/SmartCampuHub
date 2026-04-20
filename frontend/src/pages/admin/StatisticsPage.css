@@ -96,6 +96,85 @@
   gap: 1rem;
 }
 
+.stats-line-panel {
+  margin-bottom: 0;
+}
+
+.stats-line-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.stats-line-head h3 {
+  margin: 0;
+}
+
+.stats-line-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.stats-line-chart-wrap {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 1px 0 #f8fafc;
+}
+
+.stats-line-chart {
+  width: 100%;
+  height: 280px;
+}
+
+.stats-line-grid {
+  stroke: #e8edf7;
+  stroke-width: 1;
+}
+
+.stats-line-area {
+  fill: url(#dailyTrendArea);
+}
+
+.stats-line-path {
+  fill: none;
+  stroke: #4f46e5;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 4px rgba(79, 70, 229, 0.22));
+}
+
+.stats-line-point {
+  fill: #4f46e5;
+  stroke: #ffffff;
+  stroke-width: 1.8;
+}
+
+.stats-line-point.peak {
+  fill: #4338ca;
+  stroke: #c7d2fe;
+  stroke-width: 2.3;
+}
+
+.stats-line-x-label {
+  fill: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stats-line-y-label {
+  fill: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .stats-list {
   display: flex;
   flex-direction: column;
