@@ -54,7 +54,8 @@ public class BookingMapper {
                 booking.getRejectionReason(),
                 booking.getCancelReason(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt());
+                booking.getUpdatedAt(),
+                booking.getQrScannedAt());
     }
 
     private ResourceCategory resolveCategory(Resource resource) {

@@ -17,6 +17,8 @@ public interface BookingService {
 
     void deleteBooking(String bookingId);
 
+    BookingResponse getBookingByQrToken(String qrToken);
+
     List<String> findMalformedBookingIds();
 
     int deleteMalformedBookings();

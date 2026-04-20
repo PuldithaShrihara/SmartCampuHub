@@ -16,6 +16,7 @@ import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
 import com.example.backend.booking.dto.BookingStatusUpdateRequest;
 import com.example.backend.booking.entity.BookingStatus;
+import com.example.backend.common.response.ApiResponse;
 import com.example.backend.booking.service.BookingService;
 
 import jakarta.validation.Valid;
@@ -57,6 +58,12 @@ public class BookingController {
     @GetMapping("/all")
     public ResponseEntity<List<BookingResponse>> getAllBookings() {
         return ResponseEntity.ok(bookingService.getAllBookings());
+    }
+
+    @GetMapping("/qr/{token}")
+    public ResponseEntity<ApiResponse<BookingResponse>> getBookingByQrToken(@PathVariable("token") String token) {
+        BookingResponse data = bookingService.getBookingByQrToken(token);
+        return ResponseEntity.ok(new ApiResponse<>(true, "QR verified successfully", data));
     }
 
     @PutMapping("/{bookingId}/status")

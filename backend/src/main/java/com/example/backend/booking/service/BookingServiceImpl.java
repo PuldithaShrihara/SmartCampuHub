@@ -7,10 +7,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.time.Instant;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
@@ -141,6 +147,137 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking not found: " + bookingId);
         }
         bookingRepository.deleteById(bookingId);
+    }
+
+    @Override
+    public BookingResponse getBookingByQrToken(String qrToken) {
+        String raw = qrToken == null ? "" : qrToken;
+        String normalized = normalizeQrLookupValue(raw);
+        if (normalized.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "QR token is required");
+        }
+
+        Set<String> candidates = extractLookupCandidates(normalized);
+        log.info("QR verification lookup started. raw='{}', normalized='{}', candidates={}",
+                safeForLog(raw), safeForLog(normalized), candidates);
+
+        Booking booking = null;
+        for (String candidate : candidates) {
+            booking = bookingRepository.findByQrToken(candidate)
+                    .or(() -> bookingRepository.findByQrTokenIgnoreCase(candidate))
+                    .orElse(null);
+            if (booking != null) {
+                log.info("QR verification matched by qrToken. candidate='{}', bookingId='{}'",
+                        safeForLog(candidate), booking.getId());
+                break;
+            }
+        }
+
+        // Backward compatibility: legacy payloads may carry booking id.
+        if (booking == null) {
+            for (String candidate : candidates) {
+                booking = bookingRepository.findById(candidate).orElse(null);
+                if (booking != null) {
+                    log.info("QR verification matched by booking id fallback. candidate='{}', bookingId='{}'",
+                            safeForLog(candidate), booking.getId());
+                    break;
+                }
+            }
+        }
+
+        if (booking == null) {
+            log.warn("QR verification failed. No booking found for raw='{}', normalized='{}'",
+                    safeForLog(raw), safeForLog(normalized));
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found for QR token");
+        }
+
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            log.warn("QR verification rejected. Booking is not approved. bookingId='{}', status='{}'",
+                    booking.getId(), booking.getStatus());
+            throw new ResponseStatusException(HttpStatus.GONE, "QR is no longer valid for this booking status");
+        }
+
+        if (booking.getQrToken() == null || booking.getQrToken().isBlank()) {
+            log.warn("QR verification rejected. Booking has no stored QR token. bookingId='{}'", booking.getId());
+            throw new ResponseStatusException(HttpStatus.GONE, "QR is not active for this booking");
+        }
+
+        if (booking.getQrScannedAt() != null) {
+            log.info("QR verification rejected. QR already scanned. bookingId='{}', scannedAt='{}'",
+                    booking.getId(), booking.getQrScannedAt());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "QR already scanned");
+        }
+
+        booking.setQrScannedAt(Instant.now());
+        Booking saved = bookingRepository.save(booking);
+        log.info("QR verification success. Marked scanned. bookingId='{}', scannedAt='{}'",
+                saved.getId(), saved.getQrScannedAt());
+        return bookingMapper.toResponse(saved);
+    }
+
+    private String normalizeQrLookupValue(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) {
+            return "";
+        }
+        try {
+            value = URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            // keep original if decode fails
+        }
+        value = value.replace("\"", "").replace("'", "").trim();
+        if (value.endsWith("/")) {
+            value = value.substring(0, value.length() - 1).trim();
+        }
+        return value;
+    }
+
+    private Set<String> extractLookupCandidates(String normalized) {
+        Set<String> out = new LinkedHashSet<>();
+        if (normalized == null || normalized.isBlank()) {
+            return out;
+        }
+        String value = normalized.trim();
+        out.add(value);
+
+        String noQuery = value.split("\\?")[0].split("#")[0].trim();
+        if (!noQuery.isBlank()) {
+            out.add(noQuery);
+        }
+
+        String[] parts = noQuery.split("/");
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String p = parts[i] == null ? "" : parts[i].trim();
+            if (!p.isBlank()) {
+                out.add(p);
+                break;
+            }
+        }
+
+        String lower = value.toLowerCase();
+        int marker = lower.indexOf("verify-booking/");
+        if (marker >= 0) {
+            String tail = value.substring(marker + "verify-booking/".length()).trim();
+            if (!tail.isBlank()) {
+                String cleanTail = tail.split("[?#]")[0].trim();
+                if (!cleanTail.isBlank()) {
+                    out.add(cleanTail);
+                }
+            }
+        }
+
+        return out;
+    }
+
+    private String safeForLog(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= 120) {
+            return trimmed;
+        }
+        return trimmed.substring(0, 120) + "...";
     }
 
     @Override
