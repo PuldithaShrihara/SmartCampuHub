@@ -27,6 +27,7 @@ function getStatusCounts(incidents) {
 export default function StudentIncidentsPage() {
   const { pushToast } = useToast()
   const incidentsListRef = useRef(null)
+  const fileInputRef = useRef(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [resourceId, setResourceId] = useState('')
@@ -38,7 +39,29 @@ export default function StudentIncidentsPage() {
   const [resources, setResources] = useState([])
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [editingIncidentId, setEditingIncidentId] = useState(null)
+  const [filePreviewUrl, setFilePreviewUrl] = useState('')
   const statusCounts = getStatusCounts(incidents)
+  const isImageFile = Boolean(file?.type?.startsWith('image/'))
+  const isPdfFile = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf')
+
+  function clearSelectedFile() {
+    setFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  useEffect(() => {
+    if (!file || !isImageFile) {
+      setFilePreviewUrl('')
+      return
+    }
+    const objectUrl = URL.createObjectURL(file)
+    setFilePreviewUrl(objectUrl)
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [file, isImageFile])
 
   async function loadMyIncidents() {
     try {
@@ -91,7 +114,7 @@ export default function StudentIncidentsPage() {
         setTitle('')
         setDescription('')
         setResourceId('')
-        setFile(null)
+        clearSelectedFile()
         setEditingIncidentId(null)
         setMessage('Incident updated successfully.')
       } else {
@@ -112,7 +135,7 @@ export default function StudentIncidentsPage() {
         setTitle('')
         setDescription('')
         setResourceId('')
-        setFile(null)
+        clearSelectedFile()
         setEditingIncidentId(null)
         setMessage('Incident submitted successfully.')
       }
@@ -133,7 +156,7 @@ export default function StudentIncidentsPage() {
     setTitle(item.title || '')
     setDescription(item.description || '')
     setResourceId(item.resourceId?.id || item.resourceId || '')
-    setFile(null)
+    clearSelectedFile()
     setMessage('')
     setError('')
   }
@@ -143,9 +166,15 @@ export default function StudentIncidentsPage() {
     setTitle('')
     setDescription('')
     setResourceId(resources.length > 0 ? resources[0].id : '')
-    setFile(null)
+    clearSelectedFile()
     setMessage('')
     setError('')
+  }
+
+  function handleRemoveAttachment() {
+    if (!file) return
+    clearSelectedFile()
+    pushToast({ type: 'success', message: 'Attachment removed successfully.' })
   }
 
   async function handleDeleteIncident(item) {
@@ -241,6 +270,7 @@ export default function StudentIncidentsPage() {
             <div className="incident-field incident-field-half">
               <label htmlFor="incident-file">Attachment (optional)</label>
               <input
+                ref={fileInputRef}
                 id="incident-file"
                 type="file"
                 accept="image/*,.pdf"
@@ -254,6 +284,32 @@ export default function StudentIncidentsPage() {
                     ? `Selected: ${file.name}`
                     : 'Supported: image, pdf'}
               </small>
+              {!editingIncidentId && file ? (
+                <div className="incident-attachment-preview">
+                  <button
+                    type="button"
+                    className="incident-attachment-remove"
+                    onClick={handleRemoveAttachment}
+                    aria-label="Remove selected attachment"
+                    title="Remove attachment"
+                  >
+                    ×
+                  </button>
+                  {isImageFile && filePreviewUrl ? (
+                    <>
+                      <img src={filePreviewUrl} alt="Attachment preview" className="incident-attachment-image" />
+                      <span className="incident-attachment-label">Image preview</span>
+                    </>
+                  ) : isPdfFile ? (
+                    <div className="incident-attachment-pdf">
+                      <span className="incident-pdf-icon">PDF</span>
+                      <span className="incident-attachment-label">{file.name}</span>
+                    </div>
+                  ) : (
+                    <span className="incident-attachment-label">{file.name}</span>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
 
