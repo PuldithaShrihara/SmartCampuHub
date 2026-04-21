@@ -26,7 +26,7 @@ export default function ResourcesPage() {
   }
   
   const [resources, setResources] = useState([])
-  const [filters, setFilters] = useState({ type: '', capacity: '' })
+  const [filters, setFilters] = useState({ type: '', location: '', capacity: '' })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingResource, setEditingResource] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
@@ -124,6 +124,10 @@ export default function ResourcesPage() {
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value })
+  }
+
+  const clearResourceFilters = () => {
+    setFilters({ type: '', location: '', capacity: '' })
   }
 
   const handleOpenModal = (resource = null) => {
@@ -256,49 +260,53 @@ export default function ResourcesPage() {
       </div>
 
       <div className="filters-container">
-        <div className="resource-tabs">
-          <button 
-            className={`tab-btn ${filters.type === '' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: '' })}
-          >
-            All Resources
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'LECTURE_HALL' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'LECTURE_HALL' })}
-          >
-            Lecture Halls
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'LAB' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'LAB' })}
-          >
-            Labs
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'MEETING_ROOM' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'MEETING_ROOM' })}
-          >
-            Meeting Rooms
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'EQUIPMENT' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'EQUIPMENT' })}
-          >
-            Equipment
-          </button>
-        </div>
-
         <div className="filters-bar">
-          <div className="filter-group">
-            <label>Min Capacity</label>
-            <input 
-              type="number" 
-              name="capacity" 
-              placeholder="E.g. 50" 
-              value={filters.capacity} 
-              onChange={handleFilterChange} 
+          <div className="filter-group filter-group--type">
+            <label htmlFor="resource-filter-type">Type</label>
+            <select
+              id="resource-filter-type"
+              name="type"
+              value={filters.type}
+              onChange={handleFilterChange}
+            >
+              <option value="">All types</option>
+              <option value="LECTURE_HALL">Lecture hall</option>
+              <option value="LAB">Lab</option>
+              <option value="MEETING_ROOM">Meeting room</option>
+              <option value="EQUIPMENT">Equipment</option>
+            </select>
+          </div>
+          <div className="filter-group filter-group--location">
+            <label htmlFor="resource-filter-location">Location</label>
+            <input
+              id="resource-filter-location"
+              type="text"
+              name="location"
+              placeholder="Search by location (partial match)"
+              value={filters.location}
+              onChange={handleFilterChange}
+              autoComplete="off"
             />
+          </div>
+          <div className="filter-group filter-group--capacity">
+            <label htmlFor="resource-filter-capacity">Min capacity</label>
+            <input
+              id="resource-filter-capacity"
+              type="number"
+              name="capacity"
+              min="0"
+              placeholder="E.g. 50"
+              value={filters.capacity}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="filter-group filter-group--actions">
+            <label className="filter-actions-label-placeholder" aria-hidden>
+              &nbsp;
+            </label>
+            <button type="button" className="clear-filters-btn" onClick={clearResourceFilters}>
+              Clear filters
+            </button>
           </div>
         </div>
       </div>
