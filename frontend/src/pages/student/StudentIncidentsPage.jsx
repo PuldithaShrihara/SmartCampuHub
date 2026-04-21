@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
-import { useToast } from '../../components/toastContext.js'
 import '../../styles/StudentIncidentsPage.css'
 
 function statusClass(status) {
@@ -25,9 +24,9 @@ function getStatusCounts(incidents) {
 }
 
 export default function StudentIncidentsPage() {
-  const { pushToast } = useToast()
   const incidentsListRef = useRef(null)
   const fileInputRef = useRef(null)
+  const formToastTimerRef = useRef(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [resourceId, setResourceId] = useState('')
@@ -40,6 +39,7 @@ export default function StudentIncidentsPage() {
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [editingIncidentId, setEditingIncidentId] = useState(null)
   const [filePreviewUrl, setFilePreviewUrl] = useState('')
+  const [formToast, setFormToast] = useState({ type: '', message: '' })
   const statusCounts = getStatusCounts(incidents)
   const isImageFile = Boolean(file?.type?.startsWith('image/'))
   const isPdfFile = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf')
@@ -49,6 +49,16 @@ export default function StudentIncidentsPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  function showFormToast(type, message) {
+    if (formToastTimerRef.current) {
+      clearTimeout(formToastTimerRef.current)
+    }
+    setFormToast({ type, message })
+    formToastTimerRef.current = setTimeout(() => {
+      setFormToast({ type: '', message: '' })
+    }, 2800)
   }
 
   useEffect(() => {
@@ -62,6 +72,14 @@ export default function StudentIncidentsPage() {
       URL.revokeObjectURL(objectUrl)
     }
   }, [file, isImageFile])
+
+  useEffect(() => {
+    return () => {
+      if (formToastTimerRef.current) {
+        clearTimeout(formToastTimerRef.current)
+      }
+    }
+  }, [])
 
   async function loadMyIncidents() {
     try {
@@ -127,10 +145,7 @@ export default function StudentIncidentsPage() {
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
-        pushToast({
-          type: 'success',
-          message: 'Incident submitted successfully! Your issue has been reported and is now pending review.',
-        })
+        showFormToast('success', 'Incident submitted successfully! Your issue has been reported and is now pending review.')
         window.dispatchEvent(new Event('notifications:changed'))
         setTitle('')
         setDescription('')
@@ -174,7 +189,7 @@ export default function StudentIncidentsPage() {
   function handleRemoveAttachment() {
     if (!file) return
     clearSelectedFile()
-    pushToast({ type: 'success', message: 'Attachment removed successfully.' })
+    showFormToast('success', 'Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
@@ -312,6 +327,12 @@ export default function StudentIncidentsPage() {
               ) : null}
             </div>
           </div>
+
+          {formToast.message ? (
+            <div className={`incident-inline-toast ${formToast.type || 'success'}`}>
+              {formToast.message}
+            </div>
+          ) : null}
 
           <button className="incident-submit-btn" type="submit" disabled={loading}>
             {loading ? (editingIncidentId ? 'Updating...' : 'Submitting...') : editingIncidentId ? 'Update Incident' : 'Submit Incident'}
