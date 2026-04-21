@@ -1,9 +1,11 @@
 package com.example.backend.user.controller;
 
 import com.example.backend.booking.entity.Booking;
+import com.example.backend.common.response.AiResourceInsightsResponse;
 import com.example.backend.common.response.DashboardStatsResponse;
 import com.example.backend.user.service.DashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,5 +29,10 @@ public class DashboardController {
     @GetMapping("/recent-pending")
     public List<Booking> getRecentPending() {
         return dashboardService.getRecentPendingBookings();
+    }
+
+    @GetMapping("/ai-resource-insights")
+    public AiResourceInsightsResponse getAiResourceInsights(@RequestParam(defaultValue = "30") int period) {
+        return dashboardService.getAiResourceInsights(period);
     }
 }
