@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FaCalendarAlt, FaChartLine, FaClock, FaCubes } from 'react-icons/fa'
+import {
+  FaBolt,
+  FaCalendarAlt,
+  FaChartLine,
+  FaChartPie,
+  FaClock,
+  FaCubes,
+  FaFire,
+  FaLayerGroup,
+} from 'react-icons/fa'
 import { getAllBookings } from '../../api/bookingApi.js'
 import './StatisticsPage.css'
 
@@ -59,9 +68,13 @@ export default function StatisticsPage() {
     statusFiltered.forEach((booking) => {
       const resourceKey = booking.resourceId || booking.resourceName || 'UNKNOWN_RESOURCE'
       const resourceName = booking.resourceName || booking.resourceId || 'Unknown Resource'
+      const bookingLoc = normalizeLocation(booking.resourceLocation)
 
-      const count = resourceMap.get(resourceKey)?.count || 0
-      resourceMap.set(resourceKey, { name: resourceName, count: count + 1 })
+      const prev = resourceMap.get(resourceKey)
+      const count = (prev?.count || 0) + 1
+      const location = prev?.location || bookingLoc
+
+      resourceMap.set(resourceKey, { name: resourceName, location, count })
 
       const slot = getTimeSlot(booking.startTime)
       slotMap.set(slot, (slotMap.get(slot) || 0) + 1)
@@ -69,11 +82,21 @@ export default function StatisticsPage() {
 
     const resourceEntries = [...resourceMap.entries()]
       .map(([key, value]) => ({ id: key, ...value }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+      .sort(
+        (a, b) =>
+          b.count - a.count ||
+          a.name.localeCompare(b.name) ||
+          (a.location || '').localeCompare(b.location || '')
+      )
 
     const topResources = resourceEntries.slice(0, 5)
     const lowResources = [...resourceEntries]
-      .sort((a, b) => a.count - b.count || a.name.localeCompare(b.name))
+      .sort(
+        (a, b) =>
+          a.count - b.count ||
+          a.name.localeCompare(b.name) ||
+          (a.location || '').localeCompare(b.location || '')
+      )
       .slice(0, 5)
 
     const slotEntries = [...slotMap.entries()].map(([key, value]) => ({
@@ -92,6 +115,13 @@ export default function StatisticsPage() {
     const dailyTrend = buildDailyTrend(statusFiltered, period)
     const maxDailyCount = Math.max(...dailyTrend.map((item) => item.count), 0)
 
+    const peakDay =
+      dailyTrend.length > 0
+        ? dailyTrend.reduce((best, d) => (d.count > best.count ? d : best), dailyTrend[0])
+        : null
+
+    const uniqueResourcesBooked = resourceEntries.length
+
     return {
       total: statusFiltered.length,
       sourceCount: bookings.length,
@@ -108,32 +138,64 @@ export default function StatisticsPage() {
       pieGradient,
       dailyTrend,
       maxDailyCount,
+      peakDay,
+      uniqueResourcesBooked,
     }
   }, [bookings, period, statusFilter])
 
+  const periodLabel = PERIOD_OPTIONS.find((o) => o.value === period)?.label || 'Custom'
+
   if (loading) {
-    return <section className="dash-card">Loading statistics...</section>
+    return (
+      <section className="stats-page stats-page--loading">
+        <div className="stats-hero stats-hero--skeleton">
+          <div className="stats-skeleton stats-skeleton--title" />
+          <div className="stats-skeleton stats-skeleton--line" />
+          <div className="stats-skeleton-row">
+            <div className="stats-skeleton stats-skeleton--pill" />
+            <div className="stats-skeleton stats-skeleton--pill" />
+          </div>
+        </div>
+        <div className="stats-kpi-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div className="stats-kpi-card stats-kpi-card--skeleton" key={i}>
+              <div className="stats-skeleton stats-skeleton--icon" />
+              <div className="stats-skeleton-block">
+                <div className="stats-skeleton stats-skeleton--line short" />
+                <div className="stats-skeleton stats-skeleton--line" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="stats-skeleton stats-skeleton--panel" />
+      </section>
+    )
   }
 
   if (error) {
     return (
-      <section className="dash-card">
-        <div className="dash-msg error">{error}</div>
+      <section className="stats-page">
+        <div className="dash-card stats-error-card">
+          <div className="dash-msg error">{error}</div>
+          <p className="stats-error-hint">Check your connection and try refreshing the page.</p>
+        </div>
       </section>
     )
   }
 
   return (
     <section className="stats-page">
-      <div className="dash-card">
-        <div className="stats-header-row">
-          <div>
-            <h2>Resource Booking Analytics</h2>
-            <p>Identify highly booked resources, low-demand resources, and peak booking periods.</p>
-          </div>
-          <div className="stats-filters">
-            <label>
-              Date Range
+      <header className="stats-hero">
+        <div className="stats-hero__bg" aria-hidden />
+        <div className="stats-hero__inner">
+          <span className="stats-hero__eyebrow">Admin · Analytics</span>
+          <h1 className="stats-hero__title">Resource booking intelligence</h1>
+          <p className="stats-hero__lead">
+            Live breakdown of demand by resource, time slot, and day. Tune the window and status to match how you review operations.
+          </p>
+          <div className="stats-hero__filters">
+            <label className="stats-filter-field">
+              <span>Date range</span>
               <select value={period} onChange={(e) => setPeriod(e.target.value)}>
                 {PERIOD_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -142,8 +204,8 @@ export default function StatisticsPage() {
                 ))}
               </select>
             </label>
-            <label>
-              Status
+            <label className="stats-filter-field">
+              <span>Booking status</span>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="APPROVED">Approved only</option>
                 <option value="PENDING">Pending only</option>
@@ -153,48 +215,205 @@ export default function StatisticsPage() {
               </select>
             </label>
           </div>
+          <div className="stats-hero__chips">
+            <span className="stats-chip">
+              <FaCalendarAlt aria-hidden />
+              {periodLabel}
+            </span>
+            <span className="stats-chip">
+              <FaLayerGroup aria-hidden />
+              {analytics.total} bookings in view
+            </span>
+            <span className="stats-chip stats-chip--muted">
+              {analytics.sourceCount} records in system
+            </span>
+          </div>
         </div>
-      </div>
+      </header>
 
       <div className="stats-kpi-grid">
-        <article className="dash-card stats-kpi-card">
-          <span className="stats-kpi-icon blue"><FaCalendarAlt /></span>
-          <div>
-            <p>Total bookings in filter</p>
-            <h3>{analytics.total}</h3>
+        <article className="stats-kpi-card stats-kpi-card--accent">
+          <span className="stats-kpi-icon blue">
+            <FaCalendarAlt aria-hidden />
+          </span>
+          <div className="stats-kpi-body">
+            <p className="stats-kpi-label">Bookings in filter</p>
+            <p className="stats-kpi-value">{analytics.total}</p>
+            <span className="stats-kpi-meta">Matches your date &amp; status rules</span>
           </div>
         </article>
-        <article className="dash-card stats-kpi-card">
-          <span className="stats-kpi-icon green"><FaChartLine /></span>
-          <div>
-            <p>Most booked resource</p>
-            <h3>{analytics.topResource ? analytics.topResource.name : 'N/A'}</h3>
-            <small>{analytics.topResource ? `${analytics.topResource.count} bookings` : 'No data'}</small>
+        <article className="stats-kpi-card">
+          <span className="stats-kpi-icon green">
+            <FaChartLine aria-hidden />
+          </span>
+          <div className="stats-kpi-body">
+            <p className="stats-kpi-label">Top resource</p>
+            {analytics.topResource ? (
+              <>
+                <p className="stats-kpi-value stats-kpi-value--text">{analytics.topResource.name}</p>
+                <p className="stats-kpi-location">{analytics.topResource.location || 'Location not set'}</p>
+                <span className="stats-kpi-meta">{analytics.topResource.count} bookings</span>
+              </>
+            ) : (
+              <>
+                <p className="stats-kpi-value stats-kpi-value--text">—</p>
+                <span className="stats-kpi-meta">No data in range</span>
+              </>
+            )}
           </div>
         </article>
-        <article className="dash-card stats-kpi-card">
-          <span className="stats-kpi-icon amber"><FaClock /></span>
-          <div>
-            <p>Highest booked time</p>
-            <h3>{analytics.highestSlot?.label || 'N/A'}</h3>
-            <small>{analytics.highestSlot ? `${analytics.highestSlot.count} bookings` : 'No data'}</small>
+        <article className="stats-kpi-card">
+          <span className="stats-kpi-icon amber">
+            <FaClock aria-hidden />
+          </span>
+          <div className="stats-kpi-body">
+            <p className="stats-kpi-label">Peak time band</p>
+            <p className="stats-kpi-value stats-kpi-value--text sm">
+              {analytics.highestSlot?.label || '—'}
+            </p>
+            <span className="stats-kpi-meta">
+              {analytics.highestSlot ? `${analytics.highestSlot.count} bookings` : 'No data in range'}
+            </span>
           </div>
         </article>
-        <article className="dash-card stats-kpi-card">
-          <span className="stats-kpi-icon pink"><FaCubes /></span>
-          <div>
-            <p>Lowest booked resource</p>
-            <h3>{analytics.lowResource ? analytics.lowResource.name : 'N/A'}</h3>
-            <small>{analytics.lowResource ? `${analytics.lowResource.count} bookings` : 'No data'}</small>
+        <article className="stats-kpi-card">
+          <span className="stats-kpi-icon pink">
+            <FaCubes aria-hidden />
+          </span>
+          <div className="stats-kpi-body">
+            <p className="stats-kpi-label">Lowest demand</p>
+            {analytics.lowResource ? (
+              <>
+                <p className="stats-kpi-value stats-kpi-value--text">{analytics.lowResource.name}</p>
+                <p className="stats-kpi-location">{analytics.lowResource.location || 'Location not set'}</p>
+                <span className="stats-kpi-meta">{analytics.lowResource.count} bookings</span>
+              </>
+            ) : (
+              <>
+                <p className="stats-kpi-value stats-kpi-value--text">—</p>
+                <span className="stats-kpi-meta">No data in range</span>
+              </>
+            )}
           </div>
         </article>
       </div>
 
-      <div className="stats-panels-grid">
-        <article className="dash-card stats-line-panel">
-          <div className="stats-line-head">
-            <h3>Daily Booking Trend (Line Graph)</h3>
-            <p>Total bookings done per each day for selected filters.</p>
+      <div className="stats-insights">
+        <article className="stats-insight">
+          <FaFire className="stats-insight__icon" aria-hidden />
+          <div>
+            <h3>Busiest day</h3>
+            <p>
+              {analytics.peakDay && analytics.peakDay.count > 0
+                ? `${analytics.peakDay.fullLabel} · ${analytics.peakDay.count} booking${analytics.peakDay.count === 1 ? '' : 's'}`
+                : 'No daily activity for this filter.'}
+            </p>
+          </div>
+        </article>
+        <article className="stats-insight">
+          <FaBolt className="stats-insight__icon" aria-hidden />
+          <div>
+            <h3>Quietest slot</h3>
+            <p>
+              {analytics.lowestSlot
+                ? `${analytics.lowestSlot.label} · ${analytics.lowestSlot.count} booking${analytics.lowestSlot.count === 1 ? '' : 's'}`
+                : '—'}
+            </p>
+          </div>
+        </article>
+        <article className="stats-insight">
+          <FaLayerGroup className="stats-insight__icon" aria-hidden />
+          <div>
+            <h3>Resources with bookings</h3>
+            <p>
+              {analytics.uniqueResourcesBooked} distinct resource{analytics.uniqueResourcesBooked === 1 ? '' : 's'} in this view
+            </p>
+          </div>
+        </article>
+      </div>
+
+      {(analytics.topResources.length > 0 || analytics.lowResources.length > 0) && (
+        <div className="stats-lists-grid">
+          <article className="dash-card stats-panel">
+            <div className="stats-panel__head">
+              <h2>
+                <FaChartLine aria-hidden /> Top resources
+              </h2>
+              <p>Share of demand among the busiest assets.</p>
+            </div>
+            {analytics.topResources.length === 0 ? (
+              <p className="stats-empty">No bookings for current filters.</p>
+            ) : (
+              <div className="stats-list">
+                {analytics.topResources.map((r, index) => (
+                  <div className="stats-list-item" key={`top-${r.id}`}>
+                    <div className="stats-list-text">
+                      <div className="stats-list-primary">
+                        <strong>
+                          <span className="stats-rank">{index + 1}</span>
+                          {r.name}
+                        </strong>
+                        <span className="stats-list-location">{r.location || 'Location not set'}</span>
+                      </div>
+                      <span className="stats-list-count">{r.count} bookings</span>
+                    </div>
+                    <div className="stats-progress">
+                      <div
+                        className="stats-progress-fill"
+                        style={{
+                          width: `${widthPercent(r.count, analytics.maxResourceCount || 1)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="dash-card stats-panel">
+            <div className="stats-panel__head">
+              <h2>
+                <FaChartPie aria-hidden /> Lower demand
+              </h2>
+              <p>Candidates for promotion or schedule changes.</p>
+            </div>
+            {analytics.lowResources.length === 0 ? (
+              <p className="stats-empty">No bookings for current filters.</p>
+            ) : (
+              <div className="stats-list">
+                {analytics.lowResources.map((r) => (
+                  <div className="stats-list-item" key={`low-${r.id}`}>
+                    <div className="stats-list-text">
+                      <div className="stats-list-primary">
+                        <strong>{r.name}</strong>
+                        <span className="stats-list-location">{r.location || 'Location not set'}</span>
+                      </div>
+                      <span className="stats-list-count">{r.count} bookings</span>
+                    </div>
+                    <div className="stats-progress low">
+                      <div
+                        className="stats-progress-fill stats-progress-fill--muted"
+                        style={{
+                          width: `${widthPercent(r.count, analytics.maxResourceCount || 1)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+        </div>
+      )}
+
+      <div className="stats-panels-grid stats-panels-grid--wide">
+        <article className="dash-card stats-line-panel stats-panel">
+          <div className="stats-panel__head stats-line-head">
+            <div>
+              <h2>Daily booking trend</h2>
+              <p>Volume per day for the selected filters.</p>
+            </div>
           </div>
           {analytics.dailyTrend.length === 0 ? (
             <p className="stats-empty">No bookings found for current filters.</p>
@@ -208,8 +427,11 @@ export default function StatisticsPage() {
       </div>
 
       <div className="stats-panels-grid">
-        <article className="dash-card">
-          <h3>Time Period Bar Chart</h3>
+        <article className="dash-card stats-panel">
+          <div className="stats-panel__head">
+            <h2>Bookings by time of day</h2>
+            <p>Morning through night distribution.</p>
+          </div>
           {analytics.slotEntries.every((item) => item.count === 0) ? (
             <p className="stats-empty">No bookings found for current filters.</p>
           ) : (
@@ -230,8 +452,11 @@ export default function StatisticsPage() {
           )}
         </article>
 
-        <article className="dash-card">
-          <h3>Resource Share Pie Chart</h3>
+        <article className="dash-card stats-panel">
+          <div className="stats-panel__head">
+            <h2>Top resource mix</h2>
+            <p>Approximate share among top five plus others.</p>
+          </div>
           {analytics.resourceShareData.length === 0 ? (
             <p className="stats-empty">No bookings found for current filters.</p>
           ) : (
@@ -239,9 +464,14 @@ export default function StatisticsPage() {
               <div className="stats-pie" style={{ background: analytics.pieGradient }} />
               <div className="stats-legend">
                 {analytics.resourceShareData.map((item) => (
-                  <div className="stats-legend-item" key={`legend-${item.label}`}>
+                  <div className="stats-legend-item" key={`legend-${item.id}`}>
                     <span className="stats-legend-dot" style={{ backgroundColor: item.color }} />
-                    <span className="stats-legend-label">{item.label}</span>
+                    <span className="stats-legend-label">
+                      <span className="stats-legend-name">{item.name}</span>
+                      {item.location ? (
+                        <span className="stats-legend-loc">{item.location}</span>
+                      ) : null}
+                    </span>
                     <span className="stats-legend-value">{item.percent}%</span>
                   </div>
                 ))}
@@ -252,10 +482,17 @@ export default function StatisticsPage() {
       </div>
 
       <p className="stats-footnote">
-        Based on {analytics.total} filtered bookings out of {analytics.sourceCount} total records.
+        Showing {analytics.total} filtered booking{analytics.total === 1 ? '' : 's'} out of {analytics.sourceCount} total record
+        {analytics.sourceCount === 1 ? '' : 's'} in the system.
       </p>
     </section>
   )
+}
+
+function normalizeLocation(value) {
+  if (value == null) return ''
+  const s = String(value).trim()
+  return s
 }
 
 function filterByPeriod(bookings, period) {
@@ -330,11 +567,18 @@ function getPercent(value, max) {
   return Math.max(4, Math.round((value / max) * 100))
 }
 
+function widthPercent(value, max) {
+  if (!max || max <= 0) return 0
+  return Math.min(100, Math.round((value / max) * 100))
+}
+
 function buildResourceShareData(topResources, total) {
   if (!total || total <= 0) return []
 
   const list = topResources.map((resource, index) => ({
-    label: resource.name,
+    id: resource.id,
+    name: resource.name,
+    location: resource.location || '',
     count: resource.count,
     percent: Math.max(1, Math.round((resource.count / total) * 100)),
     color: CHART_COLORS[index % CHART_COLORS.length],
@@ -344,7 +588,9 @@ function buildResourceShareData(topResources, total) {
   const others = total - used
   if (others > 0) {
     list.push({
-      label: 'Others',
+      id: '__others__',
+      name: 'Others',
+      location: '',
       count: others,
       percent: Math.max(1, Math.round((others / total) * 100)),
       color: CHART_COLORS[list.length % CHART_COLORS.length],
