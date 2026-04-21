@@ -6,9 +6,11 @@ import {
   FaChartPie,
   FaClock,
   FaCubes,
+  FaFilePdf,
   FaFire,
   FaLayerGroup,
 } from 'react-icons/fa'
+import { jsPDF } from 'jspdf'
 import { getAllBookings } from '../../api/bookingApi.js'
 import './StatisticsPage.css'
 
@@ -144,6 +146,211 @@ export default function StatisticsPage() {
   }, [bookings, period, statusFilter])
 
   const periodLabel = PERIOD_OPTIONS.find((o) => o.value === period)?.label || 'Custom'
+  const generatedOn = new Date().toLocaleString('en-US')
+
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 42
+    let y = margin
+
+    const colors = {
+      brand: [37, 99, 235],
+      textPrimary: [15, 23, 42],
+      textSecondary: [71, 85, 105],
+      border: [203, 213, 225],
+      cardBg: [248, 250, 252],
+      white: [255, 255, 255],
+    }
+
+    const setTextColor = (rgb) => doc.setTextColor(rgb[0], rgb[1], rgb[2])
+
+    const ensurePageSpace = (requiredHeight = 28) => {
+      if (y + requiredHeight <= pageHeight - margin) return
+      doc.addPage()
+      y = margin
+      addPageFooter()
+    }
+
+    const addPageFooter = () => {
+      const footerY = pageHeight - 20
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      setTextColor(colors.textSecondary)
+      doc.text(`Generated ${generatedOn}`, margin, footerY)
+      doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - margin, footerY, {
+        align: 'right',
+      })
+      setTextColor(colors.textPrimary)
+    }
+
+    const drawHeader = () => {
+      const headerHeight = 92
+      doc.setFillColor(colors.brand[0], colors.brand[1], colors.brand[2])
+      doc.roundedRect(margin, y, pageWidth - margin * 2, headerHeight, 10, 10, 'F')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(20)
+      setTextColor(colors.white)
+      doc.text('smartcampus.lk Administrative Statistics Report', margin + 16, y + 32)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.text('Report Topic: smartcampus.lk', margin + 16, y + 54)
+      doc.text(`Date range: ${periodLabel}`, margin + 16, y + 70)
+      doc.text(`Status filter: ${statusFilter}`, margin + 16, y + 84)
+      doc.text(`Prepared: ${generatedOn}`, pageWidth - margin - 16, y + 70, { align: 'right' })
+
+      setTextColor(colors.textPrimary)
+      y += headerHeight + 18
+    }
+
+    const addSectionTitle = (title) => {
+      ensurePageSpace(32)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      setTextColor(colors.textPrimary)
+      doc.text(title, margin, y)
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.line(margin, y + 8, pageWidth - margin, y + 8)
+      y += 24
+    }
+
+    const addParagraph = (text) => {
+      const lines = doc.splitTextToSize(String(text), pageWidth - margin * 2)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10.5)
+      setTextColor(colors.textSecondary)
+      lines.forEach((line) => {
+        ensurePageSpace(14)
+        doc.text(line, margin, y)
+        y += 14
+      })
+      setTextColor(colors.textPrimary)
+    }
+
+    const addKpiRow = (leftLabel, leftValue, rightLabel, rightValue) => {
+      const cardGap = 12
+      const cardWidth = (pageWidth - margin * 2 - cardGap) / 2
+      const cardHeight = 58
+
+      ensurePageSpace(cardHeight + 8)
+      const leftX = margin
+      const rightX = margin + cardWidth + cardGap
+
+      ;[
+        { x: leftX, label: leftLabel, value: leftValue },
+        { x: rightX, label: rightLabel, value: rightValue },
+      ].forEach((item) => {
+        doc.setFillColor(colors.cardBg[0], colors.cardBg[1], colors.cardBg[2])
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+        doc.roundedRect(item.x, y, cardWidth, cardHeight, 7, 7, 'FD')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        setTextColor(colors.textSecondary)
+        doc.text(String(item.label).toUpperCase(), item.x + 10, y + 18)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        setTextColor(colors.textPrimary)
+        const val = doc.splitTextToSize(String(item.value), cardWidth - 20)
+        doc.text(val[0] || '-', item.x + 10, y + 38)
+      })
+
+      y += cardHeight + 10
+    }
+
+    const addRankedList = (rows, emptyText) => {
+      if (!rows.length) {
+        addParagraph(emptyText)
+        return
+      }
+
+      rows.forEach((row, index) => {
+        ensurePageSpace(18)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10.5)
+        setTextColor(colors.textPrimary)
+        doc.text(`${index + 1}. ${row}`, margin, y)
+        y += 16
+      })
+    }
+
+    drawHeader()
+
+    addSectionTitle('KPI Summary')
+    addKpiRow('Filtered bookings', analytics.total, 'Distinct resources', analytics.uniqueResourcesBooked)
+    addKpiRow(
+      'Most booked resource',
+      analytics.topResource
+        ? `${analytics.topResource.name} (${analytics.topResource.location || 'Location not set'})`
+        : 'N/A',
+      'Lowest demand resource',
+      analytics.lowResource
+        ? `${analytics.lowResource.name} (${analytics.lowResource.location || 'Location not set'})`
+        : 'N/A'
+    )
+    addKpiRow(
+      'Peak time band',
+      analytics.highestSlot ? `${analytics.highestSlot.label} (${analytics.highestSlot.count})` : 'N/A',
+      'Quietest time band',
+      analytics.lowestSlot ? `${analytics.lowestSlot.label} (${analytics.lowestSlot.count})` : 'N/A'
+    )
+    y += 2
+
+    addSectionTitle('Usage Insights')
+    addParagraph(
+      `Busiest day: ${
+        analytics.peakDay && analytics.peakDay.count > 0
+          ? `${analytics.peakDay.fullLabel} (${analytics.peakDay.count} bookings)`
+          : 'No booking activity in selected filters'
+      }.`
+    )
+    addParagraph(
+      `Total filtered volume represents ${analytics.total} booking${analytics.total === 1 ? '' : 's'} out of ${
+        analytics.sourceCount
+      } source record${analytics.sourceCount === 1 ? '' : 's'} available in the system.`
+    )
+    y += 4
+
+    addSectionTitle('Top Resources')
+    addRankedList(
+      analytics.topResources.map(
+        (item) => `${item.name} | ${item.location || 'Location not set'} | ${item.count} booking${item.count === 1 ? '' : 's'}`
+      ),
+      'No top resources in selected filters.'
+    )
+    y += 4
+
+    addSectionTitle('Lower Demand Resources')
+    addRankedList(
+      analytics.lowResources.map(
+        (item) => `${item.name} | ${item.location || 'Location not set'} | ${item.count} booking${item.count === 1 ? '' : 's'}`
+      ),
+      'No low-demand resources in selected filters.'
+    )
+    y += 4
+
+    addSectionTitle('Time Slot Distribution')
+    analytics.slotEntries.forEach((slot) => {
+      addParagraph(`${slot.label}: ${slot.count} booking${slot.count === 1 ? '' : 's'}`)
+    })
+    y += 4
+
+    addSectionTitle('Notes')
+    addParagraph(
+      'This report reflects booking records currently available in the system and should be interpreted alongside operational calendar events and maintenance schedules.'
+    )
+    addParagraph('Prepared for administrative planning and utilization review.')
+
+    addPageFooter()
+
+    doc.save(`admin-statistics-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+  }
 
   if (loading) {
     return (
@@ -227,6 +434,10 @@ export default function StatisticsPage() {
             <span className="stats-chip stats-chip--muted">
               {analytics.sourceCount} records in system
             </span>
+            <button type="button" className="stats-pdf-btn" onClick={handleDownloadPdf}>
+              <FaFilePdf aria-hidden />
+              Download PDF
+            </button>
           </div>
         </div>
       </header>

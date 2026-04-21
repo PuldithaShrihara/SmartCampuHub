@@ -125,6 +125,26 @@
   font-size: 0.75rem;
 }
 
+.stats-pdf-btn {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(15, 23, 42, 0.4);
+  color: #f8fafc;
+  border-radius: 999px;
+  padding: 0.38rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.stats-pdf-btn:hover {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 /* —— Loading skeleton —— */
 .stats-page--loading .stats-hero--skeleton {
   min-height: 200px;
