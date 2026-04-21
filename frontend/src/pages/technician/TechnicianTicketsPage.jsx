@@ -54,6 +54,7 @@ export default function TechnicianTicketsPage() {
               <th>Title</th>
               <th>User</th>
               <th>Resource</th>
+              <th>Attachment</th>
               <th>Status</th>
               <th>Remarks</th>
             </tr>
@@ -61,7 +62,7 @@ export default function TechnicianTicketsPage() {
           <tbody>
             {incidents.length === 0 ? (
               <tr>
-                <td colSpan={5}>No incidents found.</td>
+                <td colSpan={6}>No incidents found.</td>
               </tr>
             ) : (
               incidents.map((item) => (
@@ -69,6 +70,15 @@ export default function TechnicianTicketsPage() {
                   <td>{item.title}</td>
                   <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                   <td>{item.resourceId?.name || '-'}</td>
+                  <td>
+                    {item.attachmentPath ? (
+                      <a href={item.attachmentPath} target="_blank" rel="noreferrer">
+                        View file
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
                   <td>
                     <select
                       value={item.status}
