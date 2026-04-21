@@ -3,6 +3,7 @@ package com.example.backend.user.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,9 @@ import com.example.backend.auth.dto.CreateStaffUserRequest;
 import com.example.backend.auth.dto.CreateUserByAdminRequest;
 import com.example.backend.auth.dto.UserSummaryDto;
 import com.example.backend.auth.service.UserManagementService;
+import com.example.backend.common.response.ApiResponse;
+import com.example.backend.user.dto.CreateTechnicianRequest;
+import com.example.backend.user.entity.User;
 import com.example.backend.user.service.UserService;
 
 import jakarta.validation.Valid;
@@ -44,6 +48,14 @@ public class AdminController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public UserSummaryDto createUser(@Valid @RequestBody CreateUserByAdminRequest request) {
 		return userManagementService.createUserByAdmin(request);
+	}
+
+	@PostMapping("/technicians")
+	public ResponseEntity<ApiResponse<User>> createTechnicianForAdmin(
+			@Valid @RequestBody CreateTechnicianRequest request) {
+		User user = userService.createTechnician(request);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse<>(true, "Technician added successfully", user));
 	}
 
 	@GetMapping("/users/technicians")
