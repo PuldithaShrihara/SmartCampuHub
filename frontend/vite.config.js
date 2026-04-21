@@ -5,8 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Fixed port so Google Cloud "Authorized JavaScript origins" can use a single entry: http://localhost:5173
-    port: 5173,
+    // Updated port to 3000 per user request
+    port: 3000,
     strictPort: true,
     proxy: {
       '/api': {

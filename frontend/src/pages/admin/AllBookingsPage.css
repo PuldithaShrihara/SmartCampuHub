@@ -1,0 +1,35 @@
+.all-bookings-header {
+  flex-wrap: wrap;
+}
+
+.all-bookings-filter-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  min-width: 170px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.all-bookings-filter-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.all-bookings-empty-caption {
+  margin: 0;
+}
+
+.all-bookings-header .dash-btn-outline {
+  border-color: #d1d5db;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.all-bookings-header .dash-btn-outline:hover:not(:disabled) {
+  border-color: #4f46e5;
+  color: #4f46e5;
+  background: #eef2ff;
+}

@@ -89,6 +89,8 @@ export default function StatisticsPage() {
     const maxSlotCount = Math.max(...slotEntries.map((s) => s.count), 0)
     const resourceShareData = buildResourceShareData(topResources, statusFiltered.length)
     const pieGradient = buildPieGradient(resourceShareData)
+    const dailyTrend = buildDailyTrend(statusFiltered, period)
+    const maxDailyCount = Math.max(...dailyTrend.map((item) => item.count), 0)
 
     return {
       total: statusFiltered.length,
@@ -104,6 +106,8 @@ export default function StatisticsPage() {
       maxSlotCount,
       resourceShareData,
       pieGradient,
+      dailyTrend,
+      maxDailyCount,
     }
   }, [bookings, period, statusFilter])
 
@@ -187,51 +191,18 @@ export default function StatisticsPage() {
       </div>
 
       <div className="stats-panels-grid">
-        <article className="dash-card">
-          <h3>Top Booked Resources</h3>
-          {analytics.topResources.length === 0 ? (
+        <article className="dash-card stats-line-panel">
+          <div className="stats-line-head">
+            <h3>Daily Booking Trend (Line Graph)</h3>
+            <p>Total bookings done per each day for selected filters.</p>
+          </div>
+          {analytics.dailyTrend.length === 0 ? (
             <p className="stats-empty">No bookings found for current filters.</p>
           ) : (
-            <div className="stats-list">
-              {analytics.topResources.map((item) => (
-                <div className="stats-list-item" key={`top-${item.id}`}>
-                  <div className="stats-list-text">
-                    <strong>{item.name}</strong>
-                    <span>{item.count} bookings</span>
-                  </div>
-                  <div className="stats-progress">
-                    <div
-                      className="stats-progress-fill"
-                      style={{ width: `${getPercent(item.count, analytics.maxResourceCount)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-
-        <article className="dash-card">
-          <h3>Low Booked Resources</h3>
-          {analytics.lowResources.length === 0 ? (
-            <p className="stats-empty">No bookings found for current filters.</p>
-          ) : (
-            <div className="stats-list">
-              {analytics.lowResources.map((item) => (
-                <div className="stats-list-item" key={`low-${item.id}`}>
-                  <div className="stats-list-text">
-                    <strong>{item.name}</strong>
-                    <span>{item.count} bookings</span>
-                  </div>
-                  <div className="stats-progress low">
-                    <div
-                      className="stats-progress-fill"
-                      style={{ width: `${getPercent(item.count, analytics.maxResourceCount)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DailyBookingsLineChart
+              data={analytics.dailyTrend}
+              maxCount={analytics.maxDailyCount}
+            />
           )}
         </article>
       </div>
@@ -279,27 +250,6 @@ export default function StatisticsPage() {
           )}
         </article>
       </div>
-
-      <article className="dash-card">
-        <div className="stats-time-head">
-          <h3>Booking Time Period Analysis</h3>
-          <p>Peak time: <strong>{analytics.highestSlot?.label || 'N/A'}</strong> | Low time: <strong>{analytics.lowestSlot?.label || 'N/A'}</strong></p>
-        </div>
-        <div className="stats-time-grid">
-          {analytics.slotEntries.map((slot) => (
-            <div className="stats-time-item" key={slot.key}>
-              <div className="stats-time-title">{slot.label}</div>
-              <div className="stats-time-value">{slot.count} bookings</div>
-              <div className="stats-progress time">
-                <div
-                  className="stats-progress-fill"
-                  style={{ width: `${getPercent(slot.count, analytics.maxSlotCount)}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </article>
 
       <p className="stats-footnote">
         Based on {analytics.total} filtered bookings out of {analytics.sourceCount} total records.
@@ -425,4 +375,133 @@ function shortLabel(slotKey) {
   if (slotKey === 'AFTERNOON') return 'Afternoon'
   if (slotKey === 'EVENING') return 'Evening'
   return 'Night'
+}
+
+function buildDailyTrend(bookings, period) {
+  if (!Array.isArray(bookings) || bookings.length === 0) return []
+
+  const byDay = new Map()
+  bookings.forEach((booking) => {
+    const date = parseBookingDate(booking.bookingDate)
+    if (!date) return
+    const key = toIsoDateKey(date)
+    byDay.set(key, (byDay.get(key) || 0) + 1)
+  })
+
+  if (byDay.size === 0) return []
+
+  // Always start from the first booking day in the filtered dataset
+  // so we don't render leading zero-only days before real activity.
+  const sortedKeys = [...byDay.keys()].sort()
+  const startDate = parseBookingDate(sortedKeys[0])
+  const endDate = parseBookingDate(sortedKeys[sortedKeys.length - 1])
+
+  if (!startDate || !endDate) return []
+
+  const result = []
+  const cursor = new Date(startDate)
+  cursor.setHours(0, 0, 0, 0)
+  const last = new Date(endDate)
+  last.setHours(0, 0, 0, 0)
+
+  while (cursor <= last) {
+    const key = toIsoDateKey(cursor)
+    const count = byDay.get(key) || 0
+    result.push({
+      key,
+      label: formatAxisDate(cursor),
+      fullLabel: formatTooltipDate(cursor),
+      count,
+    })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return result
+}
+
+function toIsoDateKey(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatAxisDate(date) {
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = date.toLocaleString('en-US', { month: 'short' })
+  return `${day} ${month}`
+}
+
+function formatTooltipDate(date) {
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = date.toLocaleString('en-US', { month: 'long' })
+  return `${day} ${month} ${date.getFullYear()}`
+}
+
+function DailyBookingsLineChart({ data, maxCount }) {
+  if (!data.length) return null
+
+  const width = 1100
+  const height = 280
+  const padding = { top: 22, right: 22, bottom: 56, left: 40 }
+  const chartWidth = width - padding.left - padding.right
+  const chartHeight = height - padding.top - padding.bottom
+  const safeMax = Math.max(1, maxCount || 1)
+
+  const points = data.map((item, index) => {
+    const x = padding.left + (data.length === 1 ? chartWidth / 2 : (index / (data.length - 1)) * chartWidth)
+    const y = padding.top + chartHeight - (item.count / safeMax) * chartHeight
+    return { ...item, x, y }
+  })
+
+  const pathData = points
+    .map((p, index) => `${index === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+    .join(' ')
+  const areaPath = `${pathData} L ${points[points.length - 1].x} ${padding.top + chartHeight} L ${points[0].x} ${padding.top + chartHeight} Z`
+
+  const gridValues = [0, 0.25, 0.5, 0.75, 1]
+  const labelStep = Math.max(1, Math.ceil(points.length / 7))
+  const peakCount = Math.max(...data.map((d) => d.count), 0)
+
+  return (
+    <div className="stats-line-chart-wrap">
+      <svg viewBox={`0 0 ${width} ${height}`} className="stats-line-chart" role="img" aria-label="Daily booking trend line graph">
+        <defs>
+          <linearGradient id="dailyTrendArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {gridValues.map((v) => {
+          const y = padding.top + chartHeight - v * chartHeight
+          const label = Math.round(v * safeMax)
+          return (
+            <g key={`grid-${v}`}>
+              <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} className="stats-line-grid" />
+              <text x={padding.left - 10} y={y + 4} textAnchor="end" className="stats-line-y-label">{label}</text>
+            </g>
+          )
+        })}
+
+        <path d={areaPath} className="stats-line-area" />
+        <path d={pathData} className="stats-line-path" />
+
+        {points.map((p, index) => (
+          <g key={`point-${p.key}`}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={p.count > 0 ? 4 : 3}
+              className={`stats-line-point${p.count === peakCount && peakCount > 0 ? ' peak' : ''}`}
+            />
+            {index % labelStep === 0 || index === points.length - 1 ? (
+              <text x={p.x} y={height - 18} textAnchor="middle" className="stats-line-x-label">{p.label}</text>
+            ) : null}
+            <title>{`${p.fullLabel}: ${p.count} bookings`}</title>
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
 }

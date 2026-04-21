@@ -30,3 +30,15 @@ export async function updateBookingStatus(bookingId, status, rejectionReason = '
 export async function deleteBooking(bookingId) {
     return apiDeleteAuth(`/api/bookings/${bookingId}`)
 }
+
+export async function getBookingByQrToken(token) {
+    const normalized = String(token || '').trim()
+    if (!normalized) {
+        throw new Error('QR token is required')
+    }
+    const res = await apiGetAuth(`/api/bookings/qr/${encodeURIComponent(normalized)}`)
+    if (res && typeof res === 'object' && 'data' in res) {
+        return res.data
+    }
+    return res
+}

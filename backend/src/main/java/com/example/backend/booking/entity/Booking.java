@@ -70,6 +70,8 @@ public class Booking {
 
 	private Instant qrGeneratedAt;
 
+	private Instant qrScannedAt;
+
 	public Booking() {
 	}
 
@@ -223,5 +225,13 @@ public class Booking {
 
 	public void setQrGeneratedAt(Instant qrGeneratedAt) {
 		this.qrGeneratedAt = qrGeneratedAt;
+	}
+
+	public Instant getQrScannedAt() {
+		return qrScannedAt;
+	}
+
+	public void setQrScannedAt(Instant qrScannedAt) {
+		this.qrScannedAt = qrScannedAt;
 	}
 }

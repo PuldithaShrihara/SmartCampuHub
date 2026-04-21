@@ -28,6 +28,7 @@ public record BookingResponse(
 	String rejectionReason,
 	String cancelReason,
 	Instant createdAt,
-	Instant updatedAt
+	Instant updatedAt,
+	Instant qrScannedAt
 ) {
 }
