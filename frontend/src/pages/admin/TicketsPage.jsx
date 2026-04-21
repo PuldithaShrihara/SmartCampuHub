@@ -131,6 +131,7 @@ export default function Tickets() {
               <th>Title</th>
               <th>User</th>
               <th>Resource</th>
+              <th>Attachment</th>
               <th>Status</th>
               <th>Assigned technician</th>
               <th>Technician Remarks</th>
@@ -139,7 +140,7 @@ export default function Tickets() {
           <tbody>
             {incidents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="tickets-empty-state">
+                <td colSpan={7} className="tickets-empty-state">
                   No incidents found.
                 </td>
               </tr>
@@ -156,6 +157,15 @@ export default function Tickets() {
                     <td>{item.title}</td>
                     <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                     <td>{item.resourceId?.name || '-'}</td>
+                    <td>
+                      {item.attachmentPath ? (
+                        <a href={item.attachmentPath} target="_blank" rel="noreferrer">
+                          View file
+                        </a>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td>
                       <div className="tickets-status-cell">
                         <span className={statusClass(item.status)}>{item.status}</span>
