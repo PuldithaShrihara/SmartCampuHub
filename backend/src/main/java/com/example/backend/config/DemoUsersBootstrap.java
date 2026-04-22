@@ -39,7 +39,7 @@ public class DemoUsersBootstrap implements ApplicationRunner {
 	@Override
 	public void run(ApplicationArguments args) {
 		seedIfAbsent("student1" + DOMAIN, "Student@123", Role.STUDENT, "Demo Student");
-		seedIfAbsent("admin" + DOMAIN, "Admin@123", Role.ADMIN, "Demo Admin");
+		seedIfAbsent("admin" + DOMAIN, "Admin@123", Role.ADMIN, "Janith");
 		seedIfAbsent("tech1" + DOMAIN, "Tech@123", Role.TECHNICIAN, "Demo Technician");
 	}
 
