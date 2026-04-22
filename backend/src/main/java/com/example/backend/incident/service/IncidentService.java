@@ -21,4 +21,8 @@ public interface IncidentService {
 	List<IncidentResponseDto> getAllIncidents(String status, String authenticatedEmail);
 
 	IncidentResponseDto updateIncident(String incidentId, IncidentUpdateRequest request, String authenticatedEmail);
+
+	IncidentResponseDto acceptAssignedIncident(String incidentId, String authenticatedEmail);
+
+	IncidentResponseDto declineAssignedIncident(String incidentId, String authenticatedEmail);
 }
