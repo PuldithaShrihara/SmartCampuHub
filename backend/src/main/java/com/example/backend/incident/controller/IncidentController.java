@@ -41,7 +41,9 @@ public class IncidentController {
 			@RequestParam("resourceId") String resourceId,
 			@RequestParam(value = "file", required = false) MultipartFile file,
 			@RequestParam(value = "attachment", required = false) MultipartFile attachment) {
+		// Read logged-in user from JWT context; frontend token decides who is creating.
 		String email = authenticatedEmail();
+		// Support both parameter names for compatibility with different frontend payloads.
 		MultipartFile upload = file != null ? file : attachment;
 		IncidentResponseDto data = incidentService.createIncident(title, description, resourceId, upload, email);
 		return ResponseEntity.status(HttpStatus.CREATED)
@@ -50,6 +52,7 @@ public class IncidentController {
 
 	@GetMapping("/my")
 	public ResponseEntity<ApiResponse<List<IncidentResponseDto>>> getMyIncidents() {
+		// Returns incidents belonging to current authenticated user only.
 		String email = authenticatedEmail();
 		List<IncidentResponseDto> data = incidentService.getMyIncidents(email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "My incidents fetched successfully", data));
@@ -74,6 +77,7 @@ public class IncidentController {
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<IncidentResponseDto>>> getAllIncidents(
 			@RequestParam(value = "status", required = false) String status) {
+		// Used by admin/technician flows; service applies role-based filtering/authorization.
 		String email = authenticatedEmail();
 		List<IncidentResponseDto> data = incidentService.getAllIncidents(status, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incidents fetched successfully", data));
@@ -83,12 +87,28 @@ public class IncidentController {
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> updateIncident(
 			@PathVariable("id") String id,
 			@RequestBody IncidentUpdateRequest request) {
+		// Central update endpoint for status updates, technician remarks, and assignment changes.
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.updateIncident(id, request, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident updated successfully", data));
 	}
 
+	@PostMapping("/{id}/accept")
+	public ResponseEntity<ApiResponse<IncidentResponseDto>> acceptIncident(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		IncidentResponseDto data = incidentService.acceptAssignedIncident(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment accepted", data));
+	}
+
+	@PostMapping("/{id}/decline")
+	public ResponseEntity<ApiResponse<IncidentResponseDto>> declineIncident(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		IncidentResponseDto data = incidentService.declineAssignedIncident(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment declined", data));
+	}
+
 	private String authenticatedEmail() {
+		// Shared helper: all protected endpoints use this to identify the caller from security context.
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null || auth.getPrincipal() == null) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");

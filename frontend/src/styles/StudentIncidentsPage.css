@@ -17,6 +17,24 @@
   margin-bottom: 6px;
 }
 
+.incident-hero-copy {
+  background-image: url('/incident-technician-illustration.png');
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 170px auto;
+  min-height: 130px;
+  padding-left: 185px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.incident-hero-copy p {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .incident-hero p {
   margin: 0;
   color: var(--text-muted);
@@ -138,6 +156,95 @@
   display: block;
   margin-top: 6px;
   color: var(--text-muted);
+}
+
+.incident-attachment-preview {
+  position: relative;
+  margin-top: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fafbff;
+  max-width: 280px;
+}
+
+.incident-attachment-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.incident-attachment-remove:hover {
+  background: #ffe4e6;
+}
+
+.incident-attachment-image {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #dbe1ff;
+}
+
+.incident-attachment-pdf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.incident-pdf-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  flex-shrink: 0;
+}
+
+.incident-attachment-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #4b5563;
+  word-break: break-word;
+}
+
+.incident-inline-toast {
+  width: fit-content;
+  max-width: 560px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.incident-inline-toast.success {
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.incident-inline-toast.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .incident-submit-btn {
@@ -263,5 +370,13 @@
 
   .incident-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .incident-hero-copy {
+    padding-left: 0;
+    padding-top: 122px;
+    background-position: center top;
+    background-size: 140px auto;
+    min-height: auto;
   }
 }

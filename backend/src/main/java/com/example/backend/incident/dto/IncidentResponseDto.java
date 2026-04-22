@@ -7,6 +7,7 @@ public record IncidentResponseDto(
 		String title,
 		String description,
 		String status,
+		String assignmentStatus,
 		String attachmentPath,
 		String technicianRemarks,
 		Instant createdAt,
