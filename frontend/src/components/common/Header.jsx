@@ -1,12 +1,12 @@
-import { FaBell, FaSignOutAlt, FaBars } from 'react-icons/fa'
+import { FaBell, FaBars } from 'react-icons/fa'
 import '../../styles/Header.css'
 
 export default function Header({
   title,
   userName,
+  userRole = 'STUDENT',
   unreadNotifications = 0,
   onNotificationClick,
-  onLogout,
 }) {
   const initials = (userName || 'U')
     .split(' ')
@@ -18,11 +18,11 @@ export default function Header({
   return (
     <header className="app-header">
       <div className="app-header-left">
-        <div className="hamburger-btn" style={{ marginRight: 20 }}>
+        <button type="button" className="hamburger-btn">
           <FaBars />
-        </div>
-        <h1>{title || 'Smart Campus Hub'}</h1>
+        </button>
       </div>
+
       <div className="app-header-right">
         <button
           type="button"
@@ -36,15 +36,13 @@ export default function Header({
           ) : null}
         </button>
 
-        <div className="header-user">
-          <span>{userName || 'User'}</span>
+        <div className="header-profile-wrap">
+          <div className="header-user-info">
+            <span>{userName || 'User'}</span>
+            <small>{userRole}</small>
+          </div>
           <div className="header-avatar">{initials || 'U'}</div>
         </div>
-
-        <button type="button" className="header-logout" onClick={onLogout}>
-          <FaSignOutAlt />
-          <span>Logout</span>
-        </button>
       </div>
     </header>
   )

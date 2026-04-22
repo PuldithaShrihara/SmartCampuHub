@@ -1,0 +1,164 @@
+.booking-grid-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.booking-grid-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.booking-grid-equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.booking-grid-top-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.booking-grid-view-btn,
+.booking-grid-equipment-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.booking-grid-view-btn {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.booking-grid-view-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.booking-grid-equipment-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.booking-grid-equipment-btn.active {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+}
+
+.booking-grid-view-btn:hover,
+.booking-grid-equipment-btn:hover {
+  filter: brightness(1.04);
+}
+
+.booking-grid-block-section {
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.booking-grid-block-header {
+  padding: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.08em;
+  color: #1e3a8a;
+  background: #eff6ff;
+}
+
+.booking-grid-block-section.f-block .booking-grid-block-header {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.booking-grid-block-section.f-block {
+  border-color: #86efac;
+}
+
+.booking-grid-room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+  padding: 0.8rem;
+  background: #f8fafc;
+}
+
+.booking-grid-g-rows {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.booking-grid-room-tile {
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  padding: 0.65rem;
+  min-height: 86px;
+  background: #ffffff;
+}
+
+.booking-grid-room-tile.equipment-tile {
+  border-color: #86efac;
+}
+
+.booking-grid-block-section.f-block .booking-grid-room-tile {
+  border-color: #86efac;
+}
+
+.booking-grid-room-image {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.55rem;
+  background: #e5e7eb;
+}
+
+.booking-grid-room-tile h3 {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 1.05rem;
+}
+
+.booking-grid-room-tile p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.booking-grid-room-meta {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.booking-grid-room-meta span {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.booking-grid-book-btn {
+  margin-top: 0.55rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  cursor: pointer;
+}
+
+.booking-grid-book-btn:hover {
+  filter: brightness(1.04);
+}
+

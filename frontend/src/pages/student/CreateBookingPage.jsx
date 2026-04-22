@@ -1,30 +1,52 @@
 ﻿import { useEffect, useState } from 'react'
-import BookingForm from '../../components/booking/BookingForm.jsx'
-import { createBooking } from '../../api/bookingApi.js'
-import { fetchResources } from '../../api/resourceApi.js'
+import { useLocation } from 'react-router-dom'
+import BookingCategorySelector from '../../components/booking/BookingCategorySelector.jsx'
+import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingForm.jsx'
+import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
+import { createEquipmentBooking, createSpaceBooking } from '../../api/bookingApi.js'
+import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
 import { useToast } from '../../components/toastContext.js'
 
 export default function CreateBookingPage() {
+  const location = useLocation()
+  const preselectedResourceId = location.state?.preselectedResourceId
   const { pushToast } = useToast()
+  const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const initialCategory = String(location.state?.initialCategory || '').toUpperCase()
+    if (initialCategory === 'SPACE' || initialCategory === 'EQUIPMENT') {
+      setBookingCategory(initialCategory)
+    }
+  }, [location.state])
+
+  useEffect(() => {
+    if (!bookingCategory) {
+      setResources([])
+      setError('')
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
 
     async function loadResources() {
       setLoading(true)
       setError('')
       try {
-        const data = await fetchResources()
+        const data = await fetchActiveResourcesByCategory(bookingCategory)
         const normalized = Array.isArray(data)
           ? data
           : Array.isArray(data?.content)
             ? data.content
             : []
-        if (!cancelled) setResources(normalized.filter((r) => r && r.id))
+        if (!cancelled) {
+          setResources(normalized.filter((r) => r && r.id))
+        }
       } catch (err) {
         if (!cancelled) {
           setResources([])
@@ -39,15 +61,27 @@ export default function CreateBookingPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [bookingCategory])
 
-  async function handleCreateBooking(payload) {
+  async function handleCreateSpaceBooking(payload) {
     try {
       setSubmitting(true)
-      await createBooking(payload)
-      pushToast({ type: 'success', message: 'Booking request created successfully.' })
+      await createSpaceBooking(payload)
+      pushToast({ type: 'success', message: 'Space booking request created successfully.' })
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Failed to create booking.' })
+      pushToast({ type: 'error', message: err?.message || 'Failed to create space booking.' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleCreateEquipmentBooking(payload) {
+    try {
+      setSubmitting(true)
+      await createEquipmentBooking(payload)
+      pushToast({ type: 'success', message: 'Equipment booking request created successfully.' })
+    } catch (err) {
+      pushToast({ type: 'error', message: err?.message || 'Failed to create equipment booking.' })
     } finally {
       setSubmitting(false)
     }
@@ -63,22 +97,44 @@ export default function CreateBookingPage() {
       </section>
 
       <section className="dash-card">
-        <h3 style={{ marginBottom: 12 }}>Booking Request</h3>
-        {loading ? (
-          <p>Loading available resources...</p>
-        ) : error ? (
-          <div className="dash-msg error">{error}</div>
-        ) : resources.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>
-            No resources are available right now. Ask admin to create resources first.
-          </p>
+        <h3 style={{ marginBottom: 12 }}>Create Booking</h3>
+
+        {!bookingCategory ? (
+          <BookingCategorySelector onSelect={setBookingCategory} />
         ) : (
-          <BookingForm
+          <div style={{ marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span className="dash-badge badge-pending">
+              {bookingCategory === 'SPACE' ? 'Labs / Lectures' : 'Equipments'}
+            </span>
+            <button type="button" className="dash-btn-outline" onClick={() => setBookingCategory('')} disabled={submitting || loading}>
+              Change Type
+            </button>
+          </div>
+        )}
+
+        {bookingCategory && loading ? (
+          <p>Loading available resources...</p>
+        ) : bookingCategory && error ? (
+          <div className="dash-msg error">{error}</div>
+        ) : bookingCategory && resources.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)' }}>
+            No active {bookingCategory === 'SPACE' ? 'space resources' : 'equipment resources'} are available right now.
+          </p>
+        ) : bookingCategory === 'SPACE' ? (
+          <CreateSpaceBookingForm
             resources={resources}
             submitting={submitting}
-            onSubmit={handleCreateBooking}
+            onSubmit={handleCreateSpaceBooking}
+            initialResourceId={preselectedResourceId}
           />
-        )}
+        ) : bookingCategory === 'EQUIPMENT' ? (
+          <CreateEquipmentBookingForm
+            resources={resources}
+            submitting={submitting}
+            onSubmit={handleCreateEquipmentBooking}
+            initialResourceId={preselectedResourceId}
+          />
+        ) : null}
       </section>
     </>
   )

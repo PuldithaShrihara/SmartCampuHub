@@ -5,8 +5,39 @@ export async function fetchResources(filters = {}) {
   if (filters.type) params.append('type', filters.type)
   if (filters.capacity) params.append('minCapacity', filters.capacity)
   if (filters.location) params.append('location', filters.location)
+  if (filters.status) params.append('status', filters.status)
+  if (filters.category) params.append('category', filters.category)
 
   return apiGetAuth(`/api/resources?${params.toString()}`)
+}
+
+export async function fetchActiveResourcesByCategory(category) {
+  const normalizedCategory = String(category || '').trim().toUpperCase()
+  const params = new URLSearchParams()
+  params.append('category', normalizedCategory)
+  try {
+    return await apiGetAuth(`/api/resources/active?${params.toString()}`)
+  } catch {
+    // Fallback for backend versions that do not expose /active by category or
+    // where legacy records do not have explicit category persisted.
+    const allActive = await fetchResources({ status: 'ACTIVE' })
+    const normalized = Array.isArray(allActive)
+      ? allActive
+      : Array.isArray(allActive?.content)
+        ? allActive.content
+        : []
+    return normalized.filter((resource) => {
+      const categoryValue = String(resource?.category || '').trim().toUpperCase()
+      const typeValue = String(resource?.type || '').trim().toUpperCase()
+      if (normalizedCategory === 'EQUIPMENT') {
+        return categoryValue === 'EQUIPMENT' || typeValue === 'EQUIPMENT'
+      }
+      if (normalizedCategory === 'SPACE') {
+        return categoryValue === 'SPACE' || (categoryValue === '' && typeValue !== 'EQUIPMENT')
+      }
+      return true
+    })
+  }
 }
 
 export async function getResource(id) {

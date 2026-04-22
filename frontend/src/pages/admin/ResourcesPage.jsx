@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa'
 import { useToast } from '../../components/toastContext.js'
 import {
   fetchResources,
@@ -26,7 +26,7 @@ export default function ResourcesPage() {
   }
   
   const [resources, setResources] = useState([])
-  const [filters, setFilters] = useState({ type: '', capacity: '', location: '' })
+  const [filters, setFilters] = useState({ type: '', location: '', capacity: '' })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingResource, setEditingResource] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
@@ -36,6 +36,7 @@ export default function ResourcesPage() {
     name: '',
     type: 'LECTURE_HALL',
     capacity: '',
+    quantity: '',
     location: '',
     availabilityWindows: '',
     status: 'ACTIVE',
@@ -78,6 +79,13 @@ export default function ResourcesPage() {
       if (!['LECTURE_HALL', 'LAB', 'MEETING_ROOM'].includes(formData.type)) {
         errors.type = 'Please select a valid type.'
       }
+    } else {
+      const quantity = parseInt(formData.quantity, 10)
+      if (formData.quantity === '') {
+        errors.quantity = 'Available quantity is required.'
+      } else if (Number.isNaN(quantity) || quantity < 1) {
+        errors.quantity = 'Available quantity must be at least 1.'
+      }
     }
 
     if (!location) {
@@ -118,8 +126,8 @@ export default function ResourcesPage() {
     setFilters({ ...filters, [e.target.name]: e.target.value })
   }
 
-  const handleSearch = () => {
-    loadResources()
+  const clearResourceFilters = () => {
+    setFilters({ type: '', location: '', capacity: '' })
   }
 
   const handleOpenModal = (resource = null) => {
@@ -131,6 +139,7 @@ export default function ResourcesPage() {
         name: resource.name,
         type: resource.type,
         capacity: resource.capacity,
+        quantity: resource.quantity ?? '',
         location: resource.location,
         availabilityWindows: resource.availabilityWindows ? resource.availabilityWindows.join(', ') : '',
         status: resource.status,
@@ -143,6 +152,7 @@ export default function ResourcesPage() {
         name: '',
         type: 'LECTURE_HALL',
         capacity: '',
+        quantity: '',
         location: '',
         availabilityWindows: '',
         status: 'ACTIVE',
@@ -164,6 +174,7 @@ export default function ResourcesPage() {
       type: category === 'EQUIPMENT' ? 'EQUIPMENT' : 'LECTURE_HALL',
       name: '',
       capacity: '',
+      quantity: '',
       location: '',
       availabilityWindows: '',
       status: 'ACTIVE',
@@ -202,9 +213,14 @@ export default function ResourcesPage() {
         formData.capacity === '' || Number.isNaN(parseInt(formData.capacity, 10))
           ? null
           : parseInt(formData.capacity, 10)
+      const normalizedQuantity =
+        formData.quantity === '' || Number.isNaN(parseInt(formData.quantity, 10))
+          ? null
+          : parseInt(formData.quantity, 10)
       const payload = {
         ...formData,
         capacity: normalizedCapacity,
+        quantity: normalizedQuantity,
         availabilityWindows: parseAvailabilityWindowsInput(formData.availabilityWindows)
       }
       
@@ -244,62 +260,53 @@ export default function ResourcesPage() {
       </div>
 
       <div className="filters-container">
-        <div className="resource-tabs">
-          <button 
-            className={`tab-btn ${filters.type === '' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: '' })}
-          >
-            All Resources
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'LECTURE_HALL' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'LECTURE_HALL' })}
-          >
-            Lecture Halls
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'LAB' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'LAB' })}
-          >
-            Labs
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'MEETING_ROOM' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'MEETING_ROOM' })}
-          >
-            Meeting Rooms
-          </button>
-          <button 
-            className={`tab-btn ${filters.type === 'EQUIPMENT' ? 'active' : ''}`}
-            onClick={() => setFilters({ ...filters, type: 'EQUIPMENT' })}
-          >
-            Equipment
-          </button>
-        </div>
-
         <div className="filters-bar">
-          <div className="filter-group">
-            <label>Location Area</label>
-            <div className="input-with-icon">
-              <FaSearch className="input-icon" />
-              <input 
-                type="text" 
-                name="location" 
-                placeholder="Search location..." 
-                value={filters.location} 
-                onChange={handleFilterChange} 
-              />
-            </div>
+          <div className="filter-group filter-group--type">
+            <label htmlFor="resource-filter-type">Type</label>
+            <select
+              id="resource-filter-type"
+              name="type"
+              value={filters.type}
+              onChange={handleFilterChange}
+            >
+              <option value="">All types</option>
+              <option value="LECTURE_HALL">Lecture hall</option>
+              <option value="LAB">Lab</option>
+              <option value="MEETING_ROOM">Meeting room</option>
+              <option value="EQUIPMENT">Equipment</option>
+            </select>
           </div>
-          <div className="filter-group">
-            <label>Min Capacity</label>
-            <input 
-              type="number" 
-              name="capacity" 
-              placeholder="E.g. 50" 
-              value={filters.capacity} 
-              onChange={handleFilterChange} 
+          <div className="filter-group filter-group--location">
+            <label htmlFor="resource-filter-location">Location</label>
+            <input
+              id="resource-filter-location"
+              type="text"
+              name="location"
+              placeholder="Search by location (partial match)"
+              value={filters.location}
+              onChange={handleFilterChange}
+              autoComplete="off"
             />
+          </div>
+          <div className="filter-group filter-group--capacity">
+            <label htmlFor="resource-filter-capacity">Min capacity</label>
+            <input
+              id="resource-filter-capacity"
+              type="number"
+              name="capacity"
+              min="0"
+              placeholder="E.g. 50"
+              value={filters.capacity}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="filter-group filter-group--actions">
+            <label className="filter-actions-label-placeholder" aria-hidden>
+              &nbsp;
+            </label>
+            <button type="button" className="clear-filters-btn" onClick={clearResourceFilters}>
+              Clear filters
+            </button>
           </div>
         </div>
       </div>
@@ -328,8 +335,8 @@ export default function ResourcesPage() {
                   <p className="resource-card-type">{formatType(res.type)}</p>
                   <div className="resource-card-details">
                     <div className="resource-card-detail">
-                      <span>Capacity</span>
-                      <strong>{res.capacity ?? 'N/A'}</strong>
+                      <span>{res.type === 'EQUIPMENT' ? 'Available Qty' : 'Capacity'}</span>
+                      <strong>{res.type === 'EQUIPMENT' ? (res.quantity ?? 'N/A') : (res.capacity ?? 'N/A')}</strong>
                     </div>
                     <div className="resource-card-detail">
                       <span>Location</span>
@@ -441,6 +448,22 @@ export default function ResourcesPage() {
                     placeholder="e.g. 150"
                   />
                   {formErrors.capacity && <p className="field-error">{formErrors.capacity}</p>}
+                </div>
+              )}
+              {isEquipmentForm && (
+                <div className="form-group">
+                  <label>Available Quantity</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    className={formErrors.quantity ? 'input-error' : ''}
+                    placeholder="e.g. 20"
+                  />
+                  {formErrors.quantity && <p className="field-error">{formErrors.quantity}</p>}
                 </div>
               )}
               <div className="form-group">

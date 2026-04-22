@@ -1,11 +1,14 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { deleteBooking, getAllBookings, updateBookingStatus } from '../../api/bookingApi.js'
+import '../student/MyBookingsPage.css'
+import './AllBookingsPage.css'
 
 export default function AllBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [activeTab, setActiveTab] = useState('ALL')
   const [updatingId, setUpdatingId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [selectedStatus, setSelectedStatus] = useState('PENDING')
@@ -85,147 +88,341 @@ export default function AllBookingsPage() {
     }
   }
 
-  const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredBookings = bookings.filter((booking) => {
-    if (!normalizedSearch) return true
+  const filteredBookings = filterBookings(bookings, statusFilter)
+  const equipmentBookings = filteredBookings.filter((booking) => resolveBookingCategory(booking) === 'EQUIPMENT')
+  const spaceBookings = filteredBookings.filter((booking) => resolveBookingCategory(booking) === 'SPACE')
 
-    const haystack = [
-      booking.userName,
-      booking.userId,
-      booking.resourceName,
-      booking.resourceId,
-      booking.status,
-      booking.bookingDate,
-      booking.startTime,
-      booking.endTime,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
+  const totalBookings = bookings.length
+  const pendingCount = bookings.filter((b) => normalizeStatus(b.status) === 'PENDING').length
+  const approvedCount = bookings.filter((b) => normalizeStatus(b.status) === 'APPROVED').length
+  const rejectedCount = bookings.filter((b) => normalizeStatus(b.status) === 'REJECTED').length
+  const cancelledCount = bookings.filter((b) => normalizeStatus(b.status) === 'CANCELLED').length
 
-    return haystack.includes(normalizedSearch)
-  })
+  function formatCell(value) {
+    if (value === null || value === undefined || value === '') return '-'
+    return String(value)
+  }
 
-  return (
-      <section className="dash-card">
-        <h3 style={{ marginBottom: 12 }}>Booking Records</h3>
-        <div style={{ marginBottom: 16 }}>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by student, resource, date, or status..."
-            style={{
-              width: '100%',
-              maxWidth: 420,
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: '#fff',
-            }}
-          />
-        </div>
-        {actionError && <div className="dash-msg error">{actionError}</div>}
-        {loading ? (
-          <p>Loading bookings...</p>
-        ) : error ? (
-          <div className="dash-msg error">{error}</div>
-        ) : filteredBookings.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No bookings found.</p>
+  function formatTime(value) {
+    if (!value || !/^\d{2}:\d{2}/.test(String(value))) return formatCell(value)
+    const [hh, mm] = String(value).slice(0, 5).split(':').map(Number)
+    const period = hh >= 12 ? 'PM' : 'AM'
+    const hour12 = hh % 12 || 12
+    return `${String(hour12).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${period}`
+  }
+
+  function renderStatusCell(b) {
+    if (editingId === b.id) {
+      return (
+        <select
+          className="dash-inline-select"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          disabled={updatingId === b.id}
+        >
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      )
+    }
+    return (
+      <span className={`dash-badge badge-${normalizeStatus(b.status).toLowerCase()}`}>
+        {formatCell(normalizeStatus(b.status))}
+      </span>
+    )
+  }
+
+  function renderActionsCell(b) {
+    return (
+      <td className="no-print">
+        {editingId === b.id ? (
+          <div className="dash-actions-inline">
+            <button
+              type="button"
+              className="dash-btn-outline"
+              disabled={updatingId === b.id}
+              onClick={() => handleSaveEdit(b.id)}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="dash-btn-outline"
+              disabled={updatingId === b.id}
+              onClick={handleCancelEdit}
+            >
+              Cancel
+            </button>
+          </div>
         ) : (
-          <div className="dash-table-wrap">
-            <table className="dash-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Resource</th>
-                  <th>Date & Time</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBookings.map((b) => (
-                  <tr key={b.id}>
-                    <td>
-                      <div className="res-name">{b.userName}</div>
-                      <div className="res-id">{b.userId}</div>
-                    </td>
-                    <td>
-                      <div className="res-name">{b.resourceName || 'Unknown Resource'}</div>
-                      <div className="res-id">{b.resourceId}</div>
-                    </td>
-                    <td>
-                      <div>{b.bookingDate}</div>
-                      <div className="res-id">{b.startTime} - {b.endTime}</div>
-                    </td>
-                    <td>
-                      {editingId === b.id ? (
-                        <select
-                          className="dash-inline-select"
-                          value={selectedStatus}
-                          onChange={(e) => setSelectedStatus(e.target.value)}
-                          disabled={updatingId === b.id}
-                        >
-                          <option value="PENDING">PENDING</option>
-                          <option value="APPROVED">APPROVED</option>
-                          <option value="REJECTED">REJECTED</option>
-                          <option value="CANCELLED">CANCELLED</option>
-                        </select>
-                      ) : (
-                        <span className={`dash-badge badge-${b.status.toLowerCase()}`}>
-                          {b.status}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {editingId === b.id ? (
-                        <div className="dash-actions-inline">
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleSaveEdit(b.id)}
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={handleCancelEdit}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="dash-actions-inline">
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleEditClick(b)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="dash-btn-outline"
-                            disabled={updatingId === b.id}
-                            onClick={() => handleDeleteBooking(b.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="dash-actions-inline">
+            <button
+              type="button"
+              className="dash-btn-outline"
+              disabled={updatingId === b.id}
+              onClick={() => handleEditClick(b)}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="dash-btn-outline"
+              disabled={updatingId === b.id}
+              onClick={() => handleDeleteBooking(b.id)}
+            >
+              Delete
+            </button>
           </div>
         )}
-      </section>
+      </td>
+    )
+  }
+
+  function handleDownloadPdf() {
+    try {
+      window.print()
+    } catch (err) {
+      window.alert(err?.message || 'Failed to open print dialog.')
+    }
+  }
+
+  return (
+    <section className="dash-card bookings-shell">
+      <style>{`
+          @media print {
+            .no-print,
+            .sidebar,
+            .app-header,
+            .header-profile-wrap,
+            .dashboard-container .sidebar,
+            .dashboard-main .app-header {
+              display: none !important;
+            }
+
+            .dashboard-main {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+            }
+
+            .dashboard-content {
+              padding: 0 !important;
+              margin: 0 !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+
+            .dash-card {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+
+            body {
+              background: #fff !important;
+            }
+          }
+        `}</style>
+
+      <div className="bookings-header all-bookings-header">
+        <div className="bookings-header-copy">
+          <h2>All Bookings</h2>
+          <p className="bookings-header-subtitle">
+            Review and manage all booking requests across the campus.
+          </p>
+        </div>
+        <div className="no-print bookings-header-actions">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="all-bookings-filter-select"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+          <button
+            type="button"
+            className="dash-btn-outline"
+            onClick={handleDownloadPdf}
+            disabled={filteredBookings.length === 0}
+          >
+            Download PDF
+          </button>
+        </div>
+      </div>
+
+      {actionError && <div className="dash-msg error">{actionError}</div>}
+
+      {loading ? (
+        <p>Loading bookings...</p>
+      ) : error ? (
+        <div className="dash-msg error">{error}</div>
+      ) : (
+        <>
+          <div className="bookings-stat-grid">
+            <StatCard title="Total Bookings" value={totalBookings} tone="total" />
+            <StatCard title="Pending" value={pendingCount} tone="pending" />
+            <StatCard title="Approved" value={approvedCount} tone="approved" />
+            <StatCard title="Rejected" value={rejectedCount} tone="rejected" />
+            <StatCard title="Cancelled" value={cancelledCount} tone="cancelled" />
+          </div>
+
+          <div className="bookings-tabs">
+            {[
+              { id: 'ALL', label: 'All Bookings' },
+              { id: 'EQUIPMENT', label: 'Equipment Bookings' },
+              { id: 'SPACE', label: 'Labs / Lecture Halls Bookings' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`bookings-tab-btn${activeTab === tab.id ? ' active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {(activeTab === 'ALL' || activeTab === 'SPACE') && (
+            <div className="bookings-table-section">
+              <h3 className="bookings-table-title">Labs / Lecture Halls Bookings</h3>
+              {spaceBookings.length === 0 ? (
+                <p className="bookings-empty">
+                  No labs/lectures bookings to show{statusFilter !== 'ALL' ? ' for this filter' : ''}.
+                </p>
+              ) : (
+                <div className="dash-table-wrap bookings-table-wrap">
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>Resource Name</th>
+                        <th>Resource Type</th>
+                        <th>Location</th>
+                        <th>Username</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Attendees</th>
+                        <th>Purpose</th>
+                        <th>Status</th>
+                        <th className="no-print">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spaceBookings.map((b) => (
+                        <tr key={b.id}>
+                          <td>{formatCell(b.resourceName)}</td>
+                          <td>{formatCell(String(b.resourceType || 'UNKNOWN').replace(/_/g, ' '))}</td>
+                          <td>{formatCell(b.resourceLocation)}</td>
+                          <td>{formatCell(b.userName)}</td>
+                          <td>{formatCell(b.bookingDate)}</td>
+                          <td>
+                            {formatTime(b.startTime)} - {formatTime(b.endTime)}
+                          </td>
+                          <td>{formatCell(b.expectedAttendees)}</td>
+                          <td>{formatCell(b.purpose)}</td>
+                          <td>{renderStatusCell(b)}</td>
+                          {renderActionsCell(b)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(activeTab === 'ALL' || activeTab === 'EQUIPMENT') && (
+            <div className="bookings-table-section">
+              <h3 className="bookings-table-title">Equipment Bookings</h3>
+              {equipmentBookings.length === 0 ? (
+                <div className="bookings-empty">
+                  <p className="all-bookings-empty-caption">No equipment bookings yet{statusFilter !== 'ALL' ? ' for this filter' : ''}.</p>
+                </div>
+              ) : (
+                <div className="dash-table-wrap bookings-table-wrap">
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>Resource Name</th>
+                        <th>Resource Type</th>
+                        <th>Location</th>
+                        <th>Username</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Attendees</th>
+                        <th>Purpose</th>
+                        <th>Status</th>
+                        <th className="no-print">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {equipmentBookings.map((b) => (
+                        <tr key={b.id}>
+                          <td>{formatCell(b.resourceName)}</td>
+                          <td>{formatCell(String(b.resourceType || 'UNKNOWN').replace(/_/g, ' '))}</td>
+                          <td>{formatCell(b.resourceLocation)}</td>
+                          <td>{formatCell(b.userName)}</td>
+                          <td>{formatCell(b.bookingDate)}</td>
+                          <td>
+                            {formatTime(b.startTime)} - {formatTime(b.endTime)}
+                          </td>
+                          <td>{formatCell(b.quantityRequested)}</td>
+                          <td>{formatCell(b.purpose)}</td>
+                          <td>{renderStatusCell(b)}</td>
+                          {renderActionsCell(b)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </section>
   )
 }
 
+function filterBookings(bookings, statusFilter) {
+  const normalizedStatus = (statusFilter || 'ALL').trim().toUpperCase()
+
+  return bookings.filter((booking) => {
+    if (normalizedStatus !== 'ALL') {
+      if ((booking.status || '').trim().toUpperCase() !== normalizedStatus) return false
+    }
+    return true
+  })
+}
+
+function normalizeStatus(value) {
+  return String(value || 'PENDING').trim().toUpperCase()
+}
+
+function resolveBookingCategory(booking) {
+  const bookingType = String(booking?.bookingType || '').trim().toUpperCase()
+  const resourceCategory = String(booking?.resourceCategory || '').trim().toUpperCase()
+  const resourceType = String(booking?.resourceType || '').trim().toUpperCase()
+
+  if (bookingType === 'EQUIPMENT' || resourceCategory === 'EQUIPMENT' || resourceType === 'EQUIPMENT') {
+    return 'EQUIPMENT'
+  }
+
+  return 'SPACE'
+}
+
+function StatCard({ title, value, tone }) {
+  return (
+    <div className={`booking-stat-card ${tone || ''}`}>
+      <div className="booking-stat-title">{title}</div>
+      <div className="booking-stat-value">{String(value).padStart(2, '0')}</div>
+    </div>
+  )
+}
