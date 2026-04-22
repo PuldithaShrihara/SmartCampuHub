@@ -19,6 +19,8 @@ public class Incident {
 	private String attachmentPath;
 	private String technicianRemarks = "";
 	private String assignedTo;
+	private String assignedBy;
+	private IncidentAssignmentStatus assignmentStatus = IncidentAssignmentStatus.UNASSIGNED;
 	private Instant createdAt = Instant.now();
 
 	public String getId() {
@@ -91,6 +93,22 @@ public class Incident {
 
 	public void setAssignedTo(String assignedTo) {
 		this.assignedTo = assignedTo;
+	}
+
+	public String getAssignedBy() {
+		return assignedBy;
+	}
+
+	public void setAssignedBy(String assignedBy) {
+		this.assignedBy = assignedBy;
+	}
+
+	public IncidentAssignmentStatus getAssignmentStatus() {
+		return assignmentStatus;
+	}
+
+	public void setAssignmentStatus(IncidentAssignmentStatus assignmentStatus) {
+		this.assignmentStatus = assignmentStatus;
 	}
 
 	public Instant getCreatedAt() {

@@ -88,6 +88,20 @@ public class IncidentController {
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident updated successfully", data));
 	}
 
+	@PostMapping("/{id}/accept")
+	public ResponseEntity<ApiResponse<IncidentResponseDto>> acceptIncident(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		IncidentResponseDto data = incidentService.acceptAssignedIncident(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment accepted", data));
+	}
+
+	@PostMapping("/{id}/decline")
+	public ResponseEntity<ApiResponse<IncidentResponseDto>> declineIncident(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		IncidentResponseDto data = incidentService.declineAssignedIncident(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment declined", data));
+	}
+
 	private String authenticatedEmail() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null || auth.getPrincipal() == null) {
