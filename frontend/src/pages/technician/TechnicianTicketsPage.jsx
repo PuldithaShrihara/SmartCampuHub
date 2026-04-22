@@ -26,6 +26,7 @@ export default function TechnicianTicketsPage() {
     try {
       setError('')
       const res = await getAllIncidents('')
+      // Defensive API payload validation to avoid runtime crashes on malformed responses.
       setIncidents(Array.isArray(res?.data) ? res.data : [])
     } catch (err) {
       setError(err.message || 'Could not load incidents')
@@ -44,6 +45,7 @@ export default function TechnicianTicketsPage() {
   }, [])
 
   function effectiveAssignmentStatus(item) {
+    // Backward-compatibility: legacy records may have assignedTo but missing/old assignmentStatus.
     if (item.assignmentStatus && item.assignmentStatus !== 'Unassigned') {
       return item.assignmentStatus
     }
@@ -59,12 +61,14 @@ export default function TechnicianTicketsPage() {
   }
 
   const visibleIncidents = onlyMyTickets
+    // Optional operator-focused view: keep only incidents assigned to the logged-in technician.
     ? incidents.filter((item) => item.assignedTo?.email === user?.email)
     : incidents
 
   async function handleStatusChange(incidentId, status) {
     try {
       const res = await updateIncident(incidentId, { status })
+      // Respect API success contract; avoid false positive toasts on partial/error responses.
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not update status')
       }
@@ -194,6 +198,7 @@ export default function TechnicianTicketsPage() {
                   </td>
                   <td>{assignedToLabel(item)}</td>
                   <td>
+                    {/* Accept/Decline is visible only to the assigned technician while assignment is pending. */}
                     {item.assignedTo?.email === user?.email && effectiveAssignmentStatus(item) === 'Assigned' ? (
                       <div className="tech-assign-actions">
                         <button

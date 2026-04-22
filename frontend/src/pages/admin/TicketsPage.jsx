@@ -39,6 +39,7 @@ export default function Tickets() {
       setLoading(true)
       setError('')
       const res = await getAllIncidents(statusFilter)
+      // Defensive shape validation: API wrappers may return unexpected payloads on integration changes.
       setIncidents(Array.isArray(res?.data) ? res.data : [])
     } catch (err) {
       setError(err.message || 'Could not load incidents')
@@ -72,6 +73,7 @@ export default function Tickets() {
     try {
       setAssigningId(incidentId)
       setError('')
+      // Backend validates technician id/role; frontend sends raw selected value (including empty for unassign).
       await updateIncident(incidentId, { assignedTo: technicianUserId })
       await loadIncidents()
     } catch (err) {
@@ -147,6 +149,7 @@ export default function Tickets() {
               </tr>
             ) : (
               incidents.map((item) => {
+                // Support both expanded object form and plain id form for backward-compatible API responses.
                 const assignedId =
                   typeof item.assignedTo === 'object' && item.assignedTo?.id
                     ? item.assignedTo.id
