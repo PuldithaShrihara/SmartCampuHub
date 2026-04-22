@@ -1,9 +1,11 @@
 import { getToken } from './session.js'
 
 function apiBase() {
+  // In development we use Vite proxy, so keep base empty and call relative "/api/..." paths.
   if (import.meta.env.DEV) {
     return ''
   }
+  // In production, use configured backend URL (or fallback).
   return import.meta.env.VITE_API_BASE || 'http://localhost:8081'
 }
 
@@ -25,6 +27,7 @@ async function parseResponse(res) {
       (Array.isArray(data.errors) ? data.errors.join('; ') : null) ||
       res.statusText
     if (res.status === 502) {
+      // Friendly message for the common case where frontend is running but backend is down.
       msg =
         "Can't reach the backend API (Bad Gateway). Start the Spring Boot server on port 8081 and ensure MongoDB is running, then try again."
     }
@@ -55,6 +58,7 @@ export async function apiGetAuth(path) {
   if (!token) {
     throw new Error('Not signed in')
   }
+  // This is where frontend attaches JWT token so backend can identify role/user.
   const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
   const res = await fetch(url, {
     method: 'GET',
@@ -72,6 +76,7 @@ export async function apiPostAuth(path, body) {
   if (!token) {
     throw new Error('Not signed in')
   }
+  // Sends authenticated JSON request to protected backend endpoints.
   const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
   const res = await fetch(url, {
     method: 'POST',
@@ -130,6 +135,7 @@ export async function apiPutAuth(path, body = {}) {
   if (!token) {
     throw new Error('Not signed in')
   }
+  // Used for update flows (status changes, assignment updates, remarks, etc.).
   const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
   const res = await fetch(url, {
     method: 'PUT',
@@ -151,6 +157,7 @@ export async function apiPostAuthMultipart(path, formData) {
   if (!token) {
     throw new Error('Not signed in')
   }
+  // Multipart is required for file upload (image/pdf) with other form fields.
   const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
   const res = await fetch(url, {
     method: 'POST',

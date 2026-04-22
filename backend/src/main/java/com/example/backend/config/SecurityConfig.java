@@ -32,14 +32,19 @@ public class SecurityConfig {
 				.cors(Customizer.withDefaults())
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
+				// Stateless JWT setup: every request is authenticated by token, no server session.
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				// JWT filter runs before default username/password filter.
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/api/auth/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						// Role-based access control: only super admin can access superadmin APIs.
 						.requestMatchers("/api/superadmin/**").hasRole("SUPERADMIN")
+						// Role-based access control: only admin can access admin APIs.
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
+						// All remaining /api endpoints require login (student/technician/admin as permitted by service logic).
 						.requestMatchers("/api/**").authenticated()
 						.anyRequest().permitAll());
 		return http.build();

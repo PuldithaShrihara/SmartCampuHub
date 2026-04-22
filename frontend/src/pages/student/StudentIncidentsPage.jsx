@@ -124,6 +124,7 @@ export default function StudentIncidentsPage() {
     setLoading(true)
     try {
       if (editingIncidentId) {
+        // Student-side validation rule: only metadata update here; attachment edits are intentionally blocked.
         await updateMyIncident(editingIncidentId, {
           title: title.trim(),
           description: description.trim(),
@@ -142,6 +143,7 @@ export default function StudentIncidentsPage() {
           resourceId: resourceId.trim(),
           file,
         })
+        // Only treat as success when API contract explicitly confirms success=true.
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
@@ -166,6 +168,7 @@ export default function StudentIncidentsPage() {
   }
 
   function startEditIncident(item) {
+    // Business rule: student can edit only while the incident is still pending.
     if (String(item.status || '').toLowerCase() !== 'pending') return
     setEditingIncidentId(item.id)
     setTitle(item.title || '')
@@ -187,12 +190,14 @@ export default function StudentIncidentsPage() {
   }
 
   function handleRemoveAttachment() {
+    // Local-only UI action: no backend call needed before submit.
     if (!file) return
     clearSelectedFile()
     showFormToast('success', 'Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
+    // Business rule mirrors backend guard: only pending incidents can be deleted by student.
     if (String(item.status || '').toLowerCase() !== 'pending') return
     const confirmed = window.confirm('Delete this pending incident? This action cannot be undone.')
     if (!confirmed) return

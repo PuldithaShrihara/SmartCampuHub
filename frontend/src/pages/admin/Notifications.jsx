@@ -13,6 +13,7 @@ export default function Notifications() {
     setError('')
     try {
       const res = await listNotifications()
+      // Validate payload shape to keep notification table resilient to API wrapper variations.
       setNotifications(Array.isArray(res) ? res : [])
     } catch (err) {
       setError(err.message || 'Failed to load notifications')
@@ -27,6 +28,7 @@ export default function Notifications() {
 
   async function handleMarkRead(notificationId) {
     try {
+      // Mark read first, then refresh and notify global listeners (badge counters, sidebars, etc.).
       await markNotificationRead(notificationId)
       pushToast({ type: 'success', message: 'Marked as read.' })
       await load()
