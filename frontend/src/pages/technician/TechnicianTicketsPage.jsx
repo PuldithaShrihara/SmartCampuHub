@@ -7,6 +7,7 @@ import {
 } from '../../api/incidentApi.js'
 import { useAuth } from '../../context/useAuth.js'
 import { useToast } from '../../components/toastContext.js'
+import '../../styles/TechnicianTicketsPage.css'
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
 
@@ -18,6 +19,8 @@ export default function TechnicianTicketsPage() {
   const [remarksById, setRemarksById] = useState({})
   const [actionLoadingId, setActionLoadingId] = useState('')
   const [onlyMyTickets, setOnlyMyTickets] = useState(false)
+
+  const statusCounts = visibleCounts(incidents)
 
   async function loadIncidents() {
     try {
@@ -122,22 +125,41 @@ export default function TechnicianTicketsPage() {
   }
 
   return (
-    <section className="dash-card">
-      <h2>Incident Tickets</h2>
-      {error ? <div className="dash-msg error">{error}</div> : null}
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            checked={onlyMyTickets}
-            onChange={(e) => setOnlyMyTickets(e.target.checked)}
-          />
-          Only my tickets
-        </label>
-      </div>
+    <div className="tech-tickets-page">
+      <section className="dash-card tech-tickets-hero">
+        <div className="tech-tickets-hero-copy">
+          <h2>Incident Tickets</h2>
+          <p>Review assigned incidents, accept work, and keep status up to date.</p>
+        </div>
+        <div className="tech-tickets-count-grid">
+          <div className="tech-tickets-total">
+            <span>Total</span>
+            <strong>{incidents.length}</strong>
+          </div>
+          <div className="tech-tickets-mini-badges">
+            <span className="tech-mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="tech-mini-pill progress">In Progress {statusCounts.inProgress}</span>
+            <span className="tech-mini-pill resolved">Resolved {statusCounts.resolved}</span>
+          </div>
+        </div>
+      </section>
 
-      <div className="dash-table-wrap">
-        <table className="dash-table">
+      <section className="dash-card tech-tickets-table-card">
+        {error ? <div className="dash-msg error">{error}</div> : null}
+        <div className="tech-tickets-toolbar">
+          <label className="tech-toggle">
+            <input
+              type="checkbox"
+              checked={onlyMyTickets}
+              onChange={(e) => setOnlyMyTickets(e.target.checked)}
+            />
+            <span>Only my tickets</span>
+          </label>
+          <span className="tech-tickets-meta">{visibleIncidents.length} ticket(s) shown</span>
+        </div>
+
+        <div className="dash-table-wrap">
+          <table className="dash-table tech-tickets-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -153,29 +175,30 @@ export default function TechnicianTicketsPage() {
           <tbody>
             {visibleIncidents.length === 0 ? (
               <tr>
-                <td colSpan={8}>No incidents found.</td>
+                <td colSpan={8} className="tech-tickets-empty-state">No incidents found.</td>
               </tr>
             ) : (
               visibleIncidents.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.title}</td>
+                  <td className="tech-tickets-title-cell">{item.title}</td>
                   <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                   <td>{item.resourceId?.name || '-'}</td>
                   <td>
                     {item.attachmentPath ? (
-                      <a href={item.attachmentPath} target="_blank" rel="noreferrer">
+                      <a className="tech-file-link" href={item.attachmentPath} target="_blank" rel="noreferrer">
                         View file
                       </a>
                     ) : (
-                      '-'
+                      <span className="tech-muted">-</span>
                     )}
                   </td>
                   <td>{assignedToLabel(item)}</td>
                   <td>
                     {item.assignedTo?.email === user?.email && effectiveAssignmentStatus(item) === 'Assigned' ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div className="tech-assign-actions">
                         <button
                           type="button"
+                          className="tech-accept-btn"
                           onClick={() => handleAccept(item.id)}
                           disabled={actionLoadingId === item.id}
                         >
@@ -183,6 +206,7 @@ export default function TechnicianTicketsPage() {
                         </button>
                         <button
                           type="button"
+                          className="tech-decline-btn"
                           onClick={() => handleDecline(item.id)}
                           disabled={actionLoadingId === item.id}
                         >
@@ -195,6 +219,7 @@ export default function TechnicianTicketsPage() {
                   </td>
                   <td>
                     <select
+                      className="tech-status-select"
                       value={item.status}
                       disabled={
                         item.assignedTo?.email === user?.email &&
@@ -211,6 +236,7 @@ export default function TechnicianTicketsPage() {
                   </td>
                   <td>
                     <input
+                      className="tech-remarks-input"
                       value={remarksById[item.id] ?? item.technicianRemarks ?? ''}
                       onChange={(e) =>
                         setRemarksById((prev) => ({ ...prev, [item.id]: e.target.value }))
@@ -219,8 +245,8 @@ export default function TechnicianTicketsPage() {
                     />
                     <button
                       type="button"
+                      className="tech-save-btn"
                       onClick={() => saveRemarks(item.id)}
-                      style={{ marginLeft: 8 }}
                     >
                       Save
                     </button>
@@ -231,6 +257,20 @@ export default function TechnicianTicketsPage() {
           </tbody>
         </table>
       </div>
-    </section>
+      </section>
+    </div>
+  )
+}
+
+function visibleCounts(incidents) {
+  return incidents.reduce(
+    (acc, item) => {
+      const normalized = String(item.status || '').toLowerCase()
+      if (normalized === 'resolved') acc.resolved += 1
+      else if (normalized === 'in progress') acc.inProgress += 1
+      else acc.pending += 1
+      return acc
+    },
+    { pending: 0, inProgress: 0, resolved: 0 },
   )
 }
