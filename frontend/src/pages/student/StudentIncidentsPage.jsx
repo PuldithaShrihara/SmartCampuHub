@@ -219,6 +219,7 @@ export default function StudentIncidentsPage() {
       <section className="dash-card incident-hero">
         <div className="incident-hero-copy">
           <h2>Report an Incident</h2>
+          <p>Submit issues quickly and track updates from technicians.</p>
         </div>
         <div className="incident-count-grid">
           <div className="incident-count">

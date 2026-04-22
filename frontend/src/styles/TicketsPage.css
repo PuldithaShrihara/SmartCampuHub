@@ -1,6 +1,6 @@
 .tickets-page {
   display: grid;
-  gap: 20px;
+  gap: 18px;
   width: 100%;
 }
 
@@ -9,12 +9,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  border: 1px solid #e8ecff;
+  border: 1px solid #e4e9ff;
   background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
 }
 
 .tickets-hero h2 {
   margin-bottom: 6px;
+}
+
+.tickets-hero-copy p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .tickets-hero p {
@@ -33,8 +40,9 @@
   background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: #fff;
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 15px 18px;
   text-align: center;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.26);
 }
 
 .tickets-total span {
@@ -82,6 +90,7 @@
 
 .tickets-table-card {
   border: 1px solid #eceff8;
+  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.05);
 }
 
 .tickets-toolbar {
@@ -110,6 +119,13 @@
   background: #fff;
 }
 
+.tickets-filter select:focus,
+.tickets-assign-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
 .tickets-assign-select {
   min-width: 160px;
   max-width: 220px;
@@ -128,6 +144,24 @@
 .tickets-table th,
 .tickets-table td {
   vertical-align: middle;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.tickets-table th {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.tickets-table tbody tr:hover {
+  background: #f8faff;
+}
+
+.tickets-title-cell {
+  font-weight: 600;
+  color: #111827;
 }
 
 .tickets-status-cell {
@@ -139,11 +173,12 @@
 
 .ticket-status {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 .ticket-status.pending {
@@ -167,7 +202,24 @@
 .tickets-empty-state {
   text-align: center;
   color: var(--text-muted);
-  padding: 20px 10px;
+  padding: 28px 10px;
+}
+
+.tickets-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tickets-file-link:hover {
+  text-decoration: underline;
+}
+
+.tickets-muted {
+  color: #9ca3af;
 }
 
 @media (max-width: 900px) {

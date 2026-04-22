@@ -84,8 +84,9 @@ export default function Tickets() {
   return (
     <div className="tickets-page">
       <section className="dash-card tickets-hero">
-        <div>
+        <div className="tickets-hero-copy">
           <h2>All Incident Tickets</h2>
+          <p>Track incidents, assign technicians, and monitor progress in one place.</p>
         </div>
         <div className="tickets-count-grid">
           <div className="tickets-total">
@@ -154,16 +155,16 @@ export default function Tickets() {
                       : ''
                 return (
                   <tr key={item.id}>
-                    <td>{item.title}</td>
+                    <td className="tickets-title-cell">{item.title}</td>
                     <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                     <td>{item.resourceId?.name || '-'}</td>
                     <td>
                       {item.attachmentPath ? (
-                        <a href={item.attachmentPath} target="_blank" rel="noreferrer">
+                        <a className="tickets-file-link" href={item.attachmentPath} target="_blank" rel="noreferrer">
                           View file
                         </a>
                       ) : (
-                        '-'
+                        <span className="tickets-muted">-</span>
                       )}
                     </td>
                     <td>
@@ -187,7 +188,7 @@ export default function Tickets() {
                         ))}
                       </select>
                     </td>
-                    <td>{item.technicianRemarks || '-'}</td>
+                    <td>{item.technicianRemarks || <span className="tickets-muted">-</span>}</td>
                   </tr>
                 )
               })
