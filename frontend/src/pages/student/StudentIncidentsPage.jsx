@@ -4,77 +4,105 @@ import { fetchResources } from '../../api/resourceApi.js'
 import '../../styles/StudentIncidentsPage.css'
 
 function statusClass(status) {
+  // Convert incoming status to normalized lowercase text.
   const normalized = String(status || '').toLowerCase()
+  // If status is resolved, return resolved badge class.
   if (normalized === 'resolved') return 'incident-status resolved'
+  // If status is in progress, return in-progress badge class.
   if (normalized === 'in progress') return 'incident-status progress'
+  // For any other value (including empty), use pending style.
   return 'incident-status pending'
 }
 
 function getStatusCounts(incidents) {
+  // Reduce full incidents list into three counters for dashboard pills.
   return incidents.reduce(
     (acc, item) => {
+      // Read current row status safely.
       const key = String(item.status || '').toLowerCase()
+      // Increase matching status count.
       if (key === 'resolved') acc.resolved += 1
       else if (key === 'in progress') acc.inProgress += 1
       else acc.pending += 1
+      // Return updated accumulator for next row.
       return acc
     },
+    // Initial counter values before scanning the list.
     { pending: 0, inProgress: 0, resolved: 0 }
   )
 }
 
 export default function StudentIncidentsPage() {
+  // Reference to "My Incidents" section for smooth scroll after successful submit.
   const incidentsListRef = useRef(null)
+  // Reference to file input so we can clear native chosen file text.
   const fileInputRef = useRef(null)
+  // Holds timeout id for inline toast auto-hide.
   const formToastTimerRef = useRef(null)
+  // Form fields for creating/updating incidents.
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [resourceId, setResourceId] = useState('')
   const [file, setFile] = useState(null)
+  // Common UI states.
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  // Data lists for table and dropdown.
   const [incidents, setIncidents] = useState([])
   const [resources, setResources] = useState([])
   const [resourcesLoading, setResourcesLoading] = useState(false)
+  // If not null, form is in "edit existing incident" mode.
   const [editingIncidentId, setEditingIncidentId] = useState(null)
+  // Object URL for image preview.
   const [filePreviewUrl, setFilePreviewUrl] = useState('')
+  // Local inline toast shown inside form card.
   const [formToast, setFormToast] = useState({ type: '', message: '' })
+  // Derived values used in UI.
   const statusCounts = getStatusCounts(incidents)
   const isImageFile = Boolean(file?.type?.startsWith('image/'))
   const isPdfFile = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf')
 
   function clearSelectedFile() {
+    // Clear React state.
     setFile(null)
     if (fileInputRef.current) {
+      // Also clear browser native file input value.
       fileInputRef.current.value = ''
     }
   }
 
   function showFormToast(type, message) {
+    // Prevent overlapping timers when user performs actions quickly.
     if (formToastTimerRef.current) {
       clearTimeout(formToastTimerRef.current)
     }
+    // Show toast immediately.
     setFormToast({ type, message })
+    // Auto-hide toast after short delay.
     formToastTimerRef.current = setTimeout(() => {
       setFormToast({ type: '', message: '' })
     }, 2800)
   }
 
   useEffect(() => {
+    // If no image file is selected, clear preview URL.
     if (!file || !isImageFile) {
       setFilePreviewUrl('')
       return
     }
+    // Create local browser URL to preview selected image.
     const objectUrl = URL.createObjectURL(file)
     setFilePreviewUrl(objectUrl)
     return () => {
+      // Free memory when file changes or component unmounts.
       URL.revokeObjectURL(objectUrl)
     }
   }, [file, isImageFile])
 
   useEffect(() => {
     return () => {
+      // Cleanup pending toast timer during unmount.
       if (formToastTimerRef.current) {
         clearTimeout(formToastTimerRef.current)
       }
@@ -82,8 +110,10 @@ export default function StudentIncidentsPage() {
   }, [])
 
   async function loadMyIncidents() {
+    // Method purpose: fetch incidents created by logged-in student.
     try {
       const res = await getMyIncidents()
+      // Array-safe response handling.
       setIncidents(Array.isArray(res?.data) ? res.data : [])
     } catch (err) {
       setError(err.message || 'Could not load incidents')
@@ -91,14 +121,17 @@ export default function StudentIncidentsPage() {
   }
 
   useEffect(() => {
+    // Initial page data load: student's incidents + available resources.
     loadMyIncidents()
     loadResources()
   }, [])
 
   async function loadResources() {
+    // Method purpose: fetch resources for incident dropdown.
     try {
       setResourcesLoading(true)
       const res = await fetchResources()
+      // Support multiple backend response shapes safely.
       const list = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
@@ -108,6 +141,7 @@ export default function StudentIncidentsPage() {
             : []
       setResources(list)
       if (!resourceId && list.length > 0) {
+        // Set first resource as default selection when form is empty.
         setResourceId(list[0].id)
       }
     } catch (err) {
@@ -118,13 +152,17 @@ export default function StudentIncidentsPage() {
   }
 
   async function handleSubmit(event) {
+    // Stop browser default form submission so React can handle async flow.
     event.preventDefault()
+    // Reset old alerts before starting action.
     setError('')
     setMessage('')
     setLoading(true)
     try {
       if (editingIncidentId) {
+        // Student-side validation rule: only metadata update here; attachment edits are intentionally blocked.
         await updateMyIncident(editingIncidentId, {
+          // Trim spaces to avoid accidental whitespace-only values.
           title: title.trim(),
           description: description.trim(),
           resourceId: resourceId.trim(),
@@ -132,30 +170,37 @@ export default function StudentIncidentsPage() {
         setTitle('')
         setDescription('')
         setResourceId('')
+        // Remove any selected file while leaving edit mode.
         clearSelectedFile()
         setEditingIncidentId(null)
         setMessage('Incident updated successfully.')
       } else {
+        // Create new incident with optional attachment.
         const response = await createIncident({
           title: title.trim(),
           description: description.trim(),
           resourceId: resourceId.trim(),
           file,
         })
+        // Only treat as success when API contract explicitly confirms success=true.
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
         showFormToast('success', 'Incident submitted successfully! Your issue has been reported and is now pending review.')
+        // Tell notification widgets/badges to refresh.
         window.dispatchEvent(new Event('notifications:changed'))
         setTitle('')
         setDescription('')
         setResourceId('')
+        // Clear selected file from state and native input.
         clearSelectedFile()
         setEditingIncidentId(null)
         setMessage('Incident submitted successfully.')
       }
+      // Reload incident table after create/update.
       await loadMyIncidents()
       if (!editingIncidentId) {
+        // After new submit, auto-scroll user to incidents list section.
         incidentsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     } catch (err) {
@@ -166,8 +211,10 @@ export default function StudentIncidentsPage() {
   }
 
   function startEditIncident(item) {
+    // Business rule: student can edit only while the incident is still pending.
     if (String(item.status || '').toLowerCase() !== 'pending') return
     setEditingIncidentId(item.id)
+    // Copy selected row values into form inputs.
     setTitle(item.title || '')
     setDescription(item.description || '')
     setResourceId(item.resourceId?.id || item.resourceId || '')
@@ -177,6 +224,7 @@ export default function StudentIncidentsPage() {
   }
 
   function cancelEdit() {
+    // Return form to create mode and clear transient UI state.
     setEditingIncidentId(null)
     setTitle('')
     setDescription('')
@@ -187,22 +235,28 @@ export default function StudentIncidentsPage() {
   }
 
   function handleRemoveAttachment() {
+    // Local-only UI action: no backend call needed before submit.
     if (!file) return
+    // Remove selected file and show confirmation.
     clearSelectedFile()
     showFormToast('success', 'Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
+    // Business rule mirrors backend guard: only pending incidents can be deleted by student.
     if (String(item.status || '').toLowerCase() !== 'pending') return
     const confirmed = window.confirm('Delete this pending incident? This action cannot be undone.')
+    // Stop here if user cancels the confirmation dialog.
     if (!confirmed) return
 
     setError('')
     setMessage('')
     setLoading(true)
     try {
+      // Delete request for selected incident id.
       await deleteMyIncident(item.id)
       if (editingIncidentId === item.id) {
+        // If deleted row was being edited, reset edit form.
         cancelEdit()
       }
       setMessage('Incident deleted successfully.')
@@ -216,9 +270,11 @@ export default function StudentIncidentsPage() {
 
   return (
     <div className="incident-page">
+      {/* Hero card: title + quick counters (Pending/In Progress/Resolved). */}
       <section className="dash-card incident-hero">
         <div className="incident-hero-copy">
           <h2>Report an Incident</h2>
+          <p>Submit issues quickly and track updates from technicians.</p>
         </div>
         <div className="incident-count-grid">
           <div className="incident-count">
@@ -233,18 +289,25 @@ export default function StudentIncidentsPage() {
         </div>
       </section>
 
+      {/* Form card: create new incident or edit pending one. */}
       <section className="dash-card incident-form-card">
+        {/* Success message from create/update/delete actions. */}
         {message ? <div className="dash-msg success">{message}</div> : null}
+        {/* Error message from API failures. */}
         {error ? <div className="dash-msg error">{error}</div> : null}
 
+        {/* onSubmit calls handleSubmit() for create/update workflow. */}
         <form className="incident-form-grid" onSubmit={handleSubmit}>
           <div className="incident-field">
             <label htmlFor="incident-title">Title</label>
             <input
               id="incident-title"
+              // Controlled input value from component state.
               value={title}
+              // Keep state in sync with user typing.
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Projector is not working"
+              // HTML required validation before submit.
               required
             />
           </div>
@@ -259,6 +322,7 @@ export default function StudentIncidentsPage() {
               required
             />
           </div>
+          {/* Row with resource selector + optional file upload. */}
           <div className="incident-form-row">
             <div className="incident-field incident-field-half">
               <label htmlFor="incident-resource">Resource</label>
@@ -267,13 +331,16 @@ export default function StudentIncidentsPage() {
                 value={resourceId}
                 onChange={(e) => setResourceId(e.target.value)}
                 required
+                // Disable when resources are loading or unavailable.
                 disabled={resourcesLoading || resources.length === 0}
               >
+                {/* Empty/loading fallback option. */}
                 {resources.length === 0 ? (
                   <option value="">
                     {resourcesLoading ? 'Loading resources...' : 'No resources found'}
                   </option>
                 ) : (
+                  // Normal case: show all resource options.
                   resources.map((resource) => (
                     <option key={resource.id} value={resource.id}>
                       {resource.name} ({resource.location || resource.id})
@@ -288,11 +355,15 @@ export default function StudentIncidentsPage() {
                 ref={fileInputRef}
                 id="incident-file"
                 type="file"
+                // Allow only image or PDF file types from file picker.
                 accept="image/*,.pdf"
+                // Store first selected file object in state.
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
+                // Business rule: attachment update disabled in edit mode.
                 disabled={Boolean(editingIncidentId)}
               />
               <small>
+                {/* Context text changes based on mode and selected file. */}
                 {editingIncidentId
                   ? 'Attachment update is disabled while editing.'
                   : file
@@ -300,6 +371,7 @@ export default function StudentIncidentsPage() {
                     : 'Supported: image, pdf'}
               </small>
               {!editingIncidentId && file ? (
+                // Preview block appears only for create mode with selected file.
                 <div className="incident-attachment-preview">
                   <button
                     type="button"
@@ -310,17 +382,20 @@ export default function StudentIncidentsPage() {
                   >
                     ×
                   </button>
+                  {/* Show image preview when selected file is an image. */}
                   {isImageFile && filePreviewUrl ? (
                     <>
                       <img src={filePreviewUrl} alt="Attachment preview" className="incident-attachment-image" />
                       <span className="incident-attachment-label">Image preview</span>
                     </>
                   ) : isPdfFile ? (
+                    // Show PDF label/card when selected file is PDF.
                     <div className="incident-attachment-pdf">
                       <span className="incident-pdf-icon">PDF</span>
                       <span className="incident-attachment-label">{file.name}</span>
                     </div>
                   ) : (
+                    // Generic filename fallback for other accepted types.
                     <span className="incident-attachment-label">{file.name}</span>
                   )}
                 </div>
@@ -328,15 +403,18 @@ export default function StudentIncidentsPage() {
             </div>
           </div>
 
+          {/* Inline toast for submit/remove feedback inside the form. */}
           {formToast.message ? (
             <div className={`incident-inline-toast ${formToast.type || 'success'}`}>
               {formToast.message}
             </div>
           ) : null}
 
+          {/* Main submit button switches text by mode and loading state. */}
           <button className="incident-submit-btn" type="submit" disabled={loading}>
             {loading ? (editingIncidentId ? 'Updating...' : 'Submitting...') : editingIncidentId ? 'Update Incident' : 'Submit Incident'}
           </button>
+          {/* Cancel button appears only in edit mode. */}
           {editingIncidentId ? (
             <button className="incident-submit-btn incident-cancel-btn" type="button" onClick={cancelEdit} disabled={loading}>
               Cancel
@@ -345,6 +423,7 @@ export default function StudentIncidentsPage() {
         </form>
       </section>
 
+      {/* Table card: shows all incidents created by current student. */}
       <section ref={incidentsListRef} className="dash-card incident-table-card">
         <h2>My Incidents</h2>
         <div className="dash-table-wrap">
@@ -359,6 +438,7 @@ export default function StudentIncidentsPage() {
               </tr>
             </thead>
             <tbody>
+              {/* Empty-state row when no incidents exist. */}
               {incidents.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="incident-empty-state">
@@ -366,15 +446,18 @@ export default function StudentIncidentsPage() {
                   </td>
                 </tr>
               ) : (
+                // Render one row per incident.
                 incidents.map((item) => (
                   <tr key={item.id}>
                     <td>{item.title}</td>
                     <td>
+                      {/* Colored status badge: Pending / In Progress / Resolved. */}
                       <span className={statusClass(item.status)}>{item.status}</span>
                     </td>
                     <td>{item.resourceId?.name || item.resourceId || '-'}</td>
                     <td>{item.technicianRemarks || '-'}</td>
                     <td>
+                      {/* Business rule: edit/delete allowed only while status is pending. */}
                       {String(item.status || '').toLowerCase() === 'pending' ? (
                         <div className="incident-action-group">
                           <button

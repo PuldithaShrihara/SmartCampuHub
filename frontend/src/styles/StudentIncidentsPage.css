@@ -17,6 +17,24 @@
   margin-bottom: 6px;
 }
 
+.incident-hero-copy {
+  background-image: url('/incident-technician-illustration.png');
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 170px auto;
+  min-height: 130px;
+  padding-left: 185px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.incident-hero-copy p {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .incident-hero p {
   margin: 0;
   color: var(--text-muted);
@@ -352,5 +370,13 @@
 
   .incident-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .incident-hero-copy {
+    padding-left: 0;
+    padding-top: 122px;
+    background-position: center top;
+    background-size: 140px auto;
+    min-height: auto;
   }
 }

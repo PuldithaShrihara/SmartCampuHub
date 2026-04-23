@@ -3,33 +3,48 @@ import { listNotifications, markNotificationRead } from '../../api/notifications
 import { useToast } from '../../components/toastContext.js'
 
 export default function Notifications() {
+  // Toast helper to show quick success/error messages.
   const { pushToast } = useToast()
+  // Notification list data.
   const [notifications, setNotifications] = useState([])
+  // Loading flag while fetching table data.
   const [loading, setLoading] = useState(false)
+  // Error text shown if API call fails.
   const [error, setError] = useState('')
 
   async function load() {
+    // Method purpose: load notifications for current logged-in technician.
     setLoading(true)
+    // Clear any previous error before new request.
     setError('')
     try {
+      // Request notifications from backend.
       const res = await listNotifications()
+      // Validate payload shape to keep notification table resilient to API wrapper variations.
       setNotifications(Array.isArray(res) ? res : [])
     } catch (err) {
+      // Keep readable fallback message.
       setError(err.message || 'Failed to load notifications')
     } finally {
+      // Always stop loading state.
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    // Initial load on first render.
     load()
   }, [])
 
   async function handleMarkRead(notificationId) {
+    // Method purpose: mark one notification as read.
     try {
+      // Mark read first, then refresh and notify global listeners (badge counters, sidebars, etc.).
       await markNotificationRead(notificationId)
       pushToast({ type: 'success', message: 'Marked as read.' })
+      // Reload list so row status immediately changes to READ.
       await load()
+      // Broadcast to navbar/other pages that unread count changed.
       window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
       pushToast({ type: 'error', message: err.message || 'Could not mark as read.' })

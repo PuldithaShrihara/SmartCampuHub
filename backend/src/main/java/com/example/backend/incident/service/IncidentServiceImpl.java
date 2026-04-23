@@ -16,6 +16,7 @@ import com.example.backend.incident.dto.IncidentResponseDto;
 import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUserSummaryDto;
+import com.example.backend.incident.entity.IncidentAssignmentStatus;
 import com.example.backend.incident.entity.Incident;
 import com.example.backend.incident.entity.IncidentStatus;
 import com.example.backend.incident.repository.IncidentRepository;
@@ -72,6 +73,7 @@ public class IncidentServiceImpl implements IncidentService {
 		incident.setUserId(currentUser.getId());
 		incident.setStatus(IncidentStatus.PENDING);
 		incident.setTechnicianRemarks("");
+		incident.setAssignmentStatus(IncidentAssignmentStatus.UNASSIGNED);
 		incident.setCreatedAt(Instant.now());
 
 		if (file != null && !file.isEmpty()) {
@@ -189,33 +191,94 @@ public class IncidentServiceImpl implements IncidentService {
 
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+		String previousAssignee = incident.getAssignedTo();
 
 		if (currentUser.getRole() == Role.ADMIN) {
 			if (request.getAssignedTo() != null) {
-				applyAssignedTechnician(incident, request.getAssignedTo());
+				applyAssignedTechnician(incident, request.getAssignedTo(), currentUser.getId());
 			}
 		} else if (currentUser.getRole() == Role.TECHNICIAN) {
+			if (!isBlank(incident.getAssignedTo()) && !currentUser.getId().equals(incident.getAssignedTo())) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is assigned to another technician");
+			}
+			IncidentAssignmentStatus effectiveStatus = effectiveAssignmentStatus(incident);
 			if (request.getStatus() != null) {
+				if (!isBlank(incident.getAssignedTo())
+						&& effectiveStatus == IncidentAssignmentStatus.ASSIGNED) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Accept the assignment before updating status");
+				}
 				incident.setStatus(parseStatus(request.getStatus()));
 			}
 			if (request.getTechnicianRemarks() != null) {
+				if (!isBlank(incident.getAssignedTo())
+						&& effectiveStatus == IncidentAssignmentStatus.ASSIGNED) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Accept the assignment before adding remarks");
+				}
 				incident.setTechnicianRemarks(request.getTechnicianRemarks().trim());
 			}
 			if (request.getAssignedTo() != null) {
-				applyAssignedTechnician(incident, request.getAssignedTo());
+				applyAssignedTechnician(incident, request.getAssignedTo(), currentUser.getId());
 			}
 		} else {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
 		}
 
 		Incident saved = incidentRepository.save(incident);
+		if (currentUser.getRole() == Role.ADMIN
+				&& !isBlank(saved.getAssignedTo())
+				&& !safeText(saved.getAssignedTo()).equals(safeText(previousAssignee))) {
+			notifyTechnicianAssigned(saved);
+		}
 		return toIncidentData(saved, true, true, true);
 	}
 
-	private void applyAssignedTechnician(Incident incident, String assignedToRaw) {
+	@Override
+	public IncidentResponseDto acceptAssignedIncident(String incidentId, String authenticatedEmail) {
+		User currentUser = requireCurrentUser(authenticatedEmail);
+		requireTechnicianRole(currentUser);
+
+		Incident incident = incidentRepository.findById(incidentId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+		if (isBlank(incident.getAssignedTo()) || !currentUser.getId().equals(incident.getAssignedTo())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is not assigned to you");
+		}
+		if (effectiveAssignmentStatus(incident) != IncidentAssignmentStatus.ASSIGNED) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incident assignment is not pending acceptance");
+		}
+
+		incident.setAssignmentStatus(IncidentAssignmentStatus.ACCEPTED);
+		Incident saved = incidentRepository.save(incident);
+		notifyAssignmentDecision(saved, currentUser, true);
+		return toIncidentData(saved, true, true, true);
+	}
+
+	@Override
+	public IncidentResponseDto declineAssignedIncident(String incidentId, String authenticatedEmail) {
+		User currentUser = requireCurrentUser(authenticatedEmail);
+		requireTechnicianRole(currentUser);
+
+		Incident incident = incidentRepository.findById(incidentId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+		if (isBlank(incident.getAssignedTo()) || !currentUser.getId().equals(incident.getAssignedTo())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is not assigned to you");
+		}
+		if (effectiveAssignmentStatus(incident) != IncidentAssignmentStatus.ASSIGNED) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incident assignment is not pending acceptance");
+		}
+
+		incident.setAssignmentStatus(IncidentAssignmentStatus.DECLINED);
+		incident.setAssignedTo(null);
+		Incident saved = incidentRepository.save(incident);
+		notifyAssignmentDecision(saved, currentUser, false);
+		return toIncidentData(saved, true, true, true);
+	}
+
+	private void applyAssignedTechnician(Incident incident, String assignedToRaw, String assignedByUserId) {
 		String assignedTo = assignedToRaw.trim();
 		if (assignedTo.isEmpty()) {
 			incident.setAssignedTo(null);
+			incident.setAssignedBy(null);
+			incident.setAssignmentStatus(IncidentAssignmentStatus.UNASSIGNED);
 			return;
 		}
 		User assignee = userRepository.findById(assignedTo)
@@ -224,6 +287,8 @@ public class IncidentServiceImpl implements IncidentService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incidents can only be assigned to technicians");
 		}
 		incident.setAssignedTo(assignedTo);
+		incident.setAssignedBy(assignedByUserId);
+		incident.setAssignmentStatus(IncidentAssignmentStatus.ASSIGNED);
 	}
 
 	private User requireCurrentUser(String authenticatedEmail) {
@@ -244,6 +309,12 @@ public class IncidentServiceImpl implements IncidentService {
 	private void requireTechnicianOrAdmin(User user) {
 		if (user.getRole() != Role.TECHNICIAN && user.getRole() != Role.ADMIN) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
+		}
+	}
+
+	private void requireTechnicianRole(User user) {
+		if (user.getRole() != Role.TECHNICIAN) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only technicians can perform this action");
 		}
 	}
 
@@ -270,6 +341,8 @@ public class IncidentServiceImpl implements IncidentService {
 
 	private IncidentResponseDto toIncidentData(Incident incident, boolean includeUser, boolean includeResource,
 			boolean includeAssignedTo) {
+		IncidentAssignmentStatus effectiveAssignmentStatus = effectiveAssignmentStatus(incident);
+
 		Object resourceData = includeResource
 				? resourceRepository.findById(incident.getResourceId()).map(this::resourceSummary).orElse(null)
 				: incident.getResourceId();
@@ -287,12 +360,23 @@ public class IncidentServiceImpl implements IncidentService {
 				incident.getTitle(),
 				incident.getDescription(),
 				incident.getStatus() == null ? null : incident.getStatus().getValue(),
+				effectiveAssignmentStatus.getValue(),
 				incident.getAttachmentPath(),
 				incident.getTechnicianRemarks(),
 				incident.getCreatedAt(),
 				resourceData,
 				userData,
 				assignedToData);
+	}
+
+	private IncidentAssignmentStatus effectiveAssignmentStatus(Incident incident) {
+		IncidentAssignmentStatus current = incident.getAssignmentStatus();
+		if (current == null || (!isBlank(incident.getAssignedTo()) && current == IncidentAssignmentStatus.UNASSIGNED)) {
+			return isBlank(incident.getAssignedTo())
+					? IncidentAssignmentStatus.UNASSIGNED
+					: IncidentAssignmentStatus.ASSIGNED;
+		}
+		return current;
 	}
 
 	private IncidentUserSummaryDto userSummary(User user) {
@@ -313,5 +397,65 @@ public class IncidentServiceImpl implements IncidentService {
 
 	private boolean isBlank(String value) {
 		return value == null || value.isBlank();
+	}
+
+	private String safeText(String value) {
+		return value == null ? "" : value.trim();
+	}
+
+	private void notifyTechnicianAssigned(Incident incident) {
+		if (isBlank(incident.getAssignedTo())) {
+			return;
+		}
+		User technician = userRepository.findById(incident.getAssignedTo()).orElse(null);
+		if (technician == null || isBlank(technician.getEmail())) {
+			return;
+		}
+		String title = safeText(incident.getTitle());
+		String message = title.isEmpty()
+				? "A new incident ticket has been assigned to you."
+				: "A new incident has been assigned to you: \"" + title + "\".";
+		try {
+			notificationService.createForUser(new CreateNotificationRequest(
+					message,
+					technician.getEmail().trim(),
+					NotificationType.TICKET));
+		} catch (Exception ex) {
+			log.warn("Could not notify assigned technician: {}", ex.getMessage());
+		}
+	}
+
+	private void notifyAssignmentDecision(Incident incident, User technician, boolean accepted) {
+		String technicianName = safeText(technician.getFullName()).isEmpty() ? technician.getEmail() : technician.getFullName();
+		String title = safeText(incident.getTitle());
+		String action = accepted ? "accepted" : "declined";
+		String message = title.isEmpty()
+				? technicianName + " has " + action + " the assigned incident."
+				: technicianName + " has " + action + " the incident: \"" + title + "\".";
+
+		// Student should only be notified when technician accepts.
+		if (accepted) {
+			notifyIncidentRelatedUser(incident.getUserId(), message);
+		}
+		// Admin gets both accepted and declined updates.
+		notifyIncidentRelatedUser(incident.getAssignedBy(), message);
+	}
+
+	private void notifyIncidentRelatedUser(String userId, String message) {
+		if (isBlank(userId) || isBlank(message)) {
+			return;
+		}
+		User target = userRepository.findById(userId).orElse(null);
+		if (target == null || isBlank(target.getEmail())) {
+			return;
+		}
+		try {
+			notificationService.createForUser(new CreateNotificationRequest(
+					message,
+					target.getEmail().trim(),
+					NotificationType.TICKET));
+		} catch (Exception ex) {
+			log.warn("Could not notify user {}: {}", userId, ex.getMessage());
+		}
 	}
 }
