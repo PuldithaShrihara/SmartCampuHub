@@ -104,6 +104,8 @@ export default function Tickets() {
       setError('')
       // Backend validates technician id/role; frontend sends raw selected value (including empty for unassign).
       await updateIncident(incidentId, { assignedTo: technicianUserId })
+      // Match requested native popup success style.
+      window.alert(technicianUserId ? 'Technician assigned successfully.' : 'Technician unassigned successfully.')
       // Refresh table so admin sees latest assignment state.
       await loadIncidents()
     } catch (err) {
