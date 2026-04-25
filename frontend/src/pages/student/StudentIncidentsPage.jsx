@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
+import { useAuth } from '../../context/useAuth.js'
 import '../../styles/StudentIncidentsPage.css'
 
 function statusClass(status) {
@@ -33,6 +34,9 @@ function getStatusCounts(incidents) {
 }
 
 export default function StudentIncidentsPage() {
+  const { user } = useAuth()
+  const allowedFileTypes = ['image/jpeg', 'image/png', 'application/pdf']
+  const maxFileSizeBytes = 2 * 1024 * 1024
   // Reference to "My Incidents" section for smooth scroll after successful submit.
   const incidentsListRef = useRef(null)
   // Reference to file input so we can clear native chosen file text.
@@ -44,6 +48,9 @@ export default function StudentIncidentsPage() {
   const [description, setDescription] = useState('')
   const [resourceId, setResourceId] = useState('')
   const [file, setFile] = useState(null)
+  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [errors, setErrors] = useState({})
   // Common UI states.
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -109,6 +116,12 @@ export default function StudentIncidentsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    // Auto-fill identity fields from logged-in user session data.
+    setFullName(user?.fullName || '')
+    setEmail(user?.email || '')
+  }, [user])
+
   async function loadMyIncidents() {
     // Method purpose: fetch incidents created by logged-in student.
     try {
@@ -140,15 +153,37 @@ export default function StudentIncidentsPage() {
             ? res.content
             : []
       setResources(list)
-      if (!resourceId && list.length > 0) {
-        // Set first resource as default selection when form is empty.
-        setResourceId(list[0].id)
-      }
     } catch (err) {
       setError(err.message || 'Could not load resources')
     } finally {
       setResourcesLoading(false)
     }
+  }
+
+  function validateForm() {
+    const nextErrors = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (title.trim().length < 10) {
+      nextErrors.title = 'Title must be at least 10 characters'
+    }
+    if (description.trim().length < 20) {
+      nextErrors.description = 'Description must be at least 20 characters'
+    }
+    if (!emailRegex.test(email.trim())) {
+      nextErrors.email = 'Please enter a valid email address'
+    }
+    if (!resourceId.trim()) {
+      nextErrors.resourceId = 'Please select a resource'
+    }
+    if (file && !allowedFileTypes.includes(file.type)) {
+      nextErrors.file = 'Only image or PDF files are allowed'
+    } else if (file && file.size > maxFileSizeBytes) {
+      nextErrors.file = 'File size must be less than 2MB'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   async function handleSubmit(event) {
@@ -157,6 +192,8 @@ export default function StudentIncidentsPage() {
     // Reset old alerts before starting action.
     setError('')
     setMessage('')
+    if (!validateForm()) return
+
     setLoading(true)
     try {
       if (editingIncidentId) {
@@ -186,7 +223,7 @@ export default function StudentIncidentsPage() {
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
-        showFormToast('success', 'Incident submitted successfully! Your issue has been reported and is now pending review.')
+        showFormToast('success', 'Incident submitted successfully!')
         // Tell notification widgets/badges to refresh.
         window.dispatchEvent(new Event('notifications:changed'))
         setTitle('')
@@ -299,9 +336,31 @@ export default function StudentIncidentsPage() {
         {/* onSubmit calls handleSubmit() for create/update workflow. */}
         <form className="incident-form-grid" onSubmit={handleSubmit}>
           <div className="incident-field">
+            <label htmlFor="incident-full-name">Full Name</label>
+            <input
+              id="incident-full-name"
+              value={fullName}
+              readOnly
+              placeholder="Full name"
+            />
+          </div>
+          <div className="incident-field">
+            <label htmlFor="incident-email">Email</label>
+            <input
+              id="incident-email"
+              className={errors.email ? 'incident-input-error' : ''}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. student@my.sliit.lk"
+              required
+            />
+            {errors.email ? <small className="incident-field-error">{errors.email}</small> : null}
+          </div>
+          <div className="incident-field">
             <label htmlFor="incident-title">Title</label>
             <input
               id="incident-title"
+              className={errors.title ? 'incident-input-error' : ''}
               // Controlled input value from component state.
               value={title}
               // Keep state in sync with user typing.
@@ -310,17 +369,20 @@ export default function StudentIncidentsPage() {
               // HTML required validation before submit.
               required
             />
+            {errors.title ? <small className="incident-field-error">{errors.title}</small> : null}
           </div>
           <div className="incident-field">
             <label htmlFor="incident-description">Description</label>
             <textarea
               id="incident-description"
+              className={errors.description ? 'incident-input-error' : ''}
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the issue clearly so technicians can help faster."
               required
             />
+            {errors.description ? <small className="incident-field-error">{errors.description}</small> : null}
           </div>
           {/* Row with resource selector + optional file upload. */}
           <div className="incident-form-row">
@@ -328,32 +390,31 @@ export default function StudentIncidentsPage() {
               <label htmlFor="incident-resource">Resource</label>
               <select
                 id="incident-resource"
+                className={errors.resourceId ? 'incident-input-error' : ''}
                 value={resourceId}
                 onChange={(e) => setResourceId(e.target.value)}
                 required
                 // Disable when resources are loading or unavailable.
                 disabled={resourcesLoading || resources.length === 0}
               >
-                {/* Empty/loading fallback option. */}
-                {resources.length === 0 ? (
-                  <option value="">
-                    {resourcesLoading ? 'Loading resources...' : 'No resources found'}
+                <option value="">
+                  {resourcesLoading ? 'Loading resources...' : resources.length === 0 ? 'No resources found' : 'Select a resource'}
+                </option>
+                {/* Normal case: show all resource options. */}
+                {resources.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.name} ({resource.location || resource.id})
                   </option>
-                ) : (
-                  // Normal case: show all resource options.
-                  resources.map((resource) => (
-                    <option key={resource.id} value={resource.id}>
-                      {resource.name} ({resource.location || resource.id})
-                    </option>
-                  ))
-                )}
+                ))}
               </select>
+              {errors.resourceId ? <small className="incident-field-error">{errors.resourceId}</small> : null}
             </div>
             <div className="incident-field incident-field-half">
               <label htmlFor="incident-file">Attachment (optional)</label>
               <input
                 ref={fileInputRef}
                 id="incident-file"
+                className={errors.file ? 'incident-input-error' : ''}
                 type="file"
                 // Allow only image or PDF file types from file picker.
                 accept="image/*,.pdf"
@@ -370,6 +431,7 @@ export default function StudentIncidentsPage() {
                     ? `Selected: ${file.name}`
                     : 'Supported: image, pdf'}
               </small>
+              {errors.file ? <small className="incident-field-error">{errors.file}</small> : null}
               {!editingIncidentId && file ? (
                 // Preview block appears only for create mode with selected file.
                 <div className="incident-attachment-preview">
