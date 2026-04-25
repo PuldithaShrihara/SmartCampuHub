@@ -97,18 +97,39 @@ export default function TechnicianTicketsPage() {
     }
   }
 
+  function validateRemarkInput(rawRemark) {
+    // Remove spaces from start and end.
+    const trimmedRemark = (rawRemark || '').trim()
+    // Must be at least 5 letters/characters.
+    if (trimmedRemark.length < 5) {
+      return { isValid: false, value: '', message: 'Remark must be at least 5 characters' }
+    }
+    // Valid remark -> return cleaned text.
+    return { isValid: true, value: trimmedRemark, message: '' }
+  }
+
   async function saveRemarks(incidentId) {
-    // Method purpose: save technician notes for one incident.
+    // Save remark for one row.
+    // Check input first. If invalid, stop here.
+    const validation = validateRemarkInput(remarksById[incidentId])
+    if (!validation.isValid) {
+      // Show error message.
+      setError(validation.message)
+      return
+    }
     try {
+      // Clear old error before saving.
+      setError('')
       const res = await updateIncident(incidentId, {
-        // Empty text is allowed, so fallback to empty string.
-        technicianRemarks: remarksById[incidentId] || '',
+        // Send cleaned remark text.
+        technicianRemarks: validation.value,
       })
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not save remarks')
       }
-      pushToast({ type: 'success', message: 'Remarks saved successfully.' })
-      // Reload to show saved remarks from server source of truth.
+      // Show success message.
+      pushToast({ type: 'success', message: 'Remark saved successfully' })
+      // Load fresh data from backend.
       await loadIncidents()
     } catch (err) {
       setError(err.message || 'Could not save remarks')
