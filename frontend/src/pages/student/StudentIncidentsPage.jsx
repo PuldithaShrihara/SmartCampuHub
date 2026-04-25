@@ -41,8 +41,6 @@ export default function StudentIncidentsPage() {
   const incidentsListRef = useRef(null)
   // Reference to file input so we can clear native chosen file text.
   const fileInputRef = useRef(null)
-  // Holds timeout id for inline toast auto-hide.
-  const formToastTimerRef = useRef(null)
   // Form fields for creating/updating incidents.
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -53,7 +51,6 @@ export default function StudentIncidentsPage() {
   const [errors, setErrors] = useState({})
   // Common UI states.
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   // Data lists for table and dropdown.
   const [incidents, setIncidents] = useState([])
@@ -63,8 +60,6 @@ export default function StudentIncidentsPage() {
   const [editingIncidentId, setEditingIncidentId] = useState(null)
   // Object URL for image preview.
   const [filePreviewUrl, setFilePreviewUrl] = useState('')
-  // Local inline toast shown inside form card.
-  const [formToast, setFormToast] = useState({ type: '', message: '' })
   // Derived values used in UI.
   const statusCounts = getStatusCounts(incidents)
   const isImageFile = Boolean(file?.type?.startsWith('image/'))
@@ -77,19 +72,6 @@ export default function StudentIncidentsPage() {
       // Also clear browser native file input value.
       fileInputRef.current.value = ''
     }
-  }
-
-  function showFormToast(type, message) {
-    // Prevent overlapping timers when user performs actions quickly.
-    if (formToastTimerRef.current) {
-      clearTimeout(formToastTimerRef.current)
-    }
-    // Show toast immediately.
-    setFormToast({ type, message })
-    // Auto-hide toast after short delay.
-    formToastTimerRef.current = setTimeout(() => {
-      setFormToast({ type: '', message: '' })
-    }, 2800)
   }
 
   useEffect(() => {
@@ -106,15 +88,6 @@ export default function StudentIncidentsPage() {
       URL.revokeObjectURL(objectUrl)
     }
   }, [file, isImageFile])
-
-  useEffect(() => {
-    return () => {
-      // Cleanup pending toast timer during unmount.
-      if (formToastTimerRef.current) {
-        clearTimeout(formToastTimerRef.current)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     // Auto-fill identity fields from logged-in user session data.
@@ -197,7 +170,6 @@ export default function StudentIncidentsPage() {
     event.preventDefault()
     // Reset old alerts before starting action.
     setError('')
-    setMessage('')
     if (!validateForm()) return
 
     setLoading(true)
@@ -216,7 +188,8 @@ export default function StudentIncidentsPage() {
         // Remove any selected file while leaving edit mode.
         clearSelectedFile()
         setEditingIncidentId(null)
-        setMessage('Incident updated successfully.')
+        // Use browser popup style feedback instead of inline success banner.
+        window.alert('Incident updated successfully.')
       } else {
         // Create new incident with optional attachment.
         const response = await createIncident({
@@ -229,7 +202,7 @@ export default function StudentIncidentsPage() {
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
-        showFormToast('success', 'Incident submitted successfully!')
+        // Keep submit feedback only in page message area (no duplicate toast).
         // Tell notification widgets/badges to refresh.
         window.dispatchEvent(new Event('notifications:changed'))
         setTitle('')
@@ -238,7 +211,8 @@ export default function StudentIncidentsPage() {
         // Clear selected file from state and native input.
         clearSelectedFile()
         setEditingIncidentId(null)
-        setMessage('Incident submitted successfully.')
+        // Use browser popup style feedback instead of inline success banner.
+        window.alert('Incident submitted successfully.')
       }
       // Reload incident table after create/update.
       await loadMyIncidents()
@@ -262,7 +236,6 @@ export default function StudentIncidentsPage() {
     setDescription(item.description || '')
     setResourceId(item.resourceId?.id || item.resourceId || '')
     clearSelectedFile()
-    setMessage('')
     setError('')
   }
 
@@ -273,7 +246,6 @@ export default function StudentIncidentsPage() {
     setDescription('')
     setResourceId(resources.length > 0 ? resources[0].id : '')
     clearSelectedFile()
-    setMessage('')
     setError('')
   }
 
@@ -282,7 +254,8 @@ export default function StudentIncidentsPage() {
     if (!file) return
     // Remove selected file and show confirmation.
     clearSelectedFile()
-    showFormToast('success', 'Attachment removed successfully.')
+    // Match the native popup style requested by user.
+    window.alert('Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
@@ -293,7 +266,6 @@ export default function StudentIncidentsPage() {
     if (!confirmed) return
 
     setError('')
-    setMessage('')
     setLoading(true)
     try {
       // Delete request for selected incident id.
@@ -302,7 +274,8 @@ export default function StudentIncidentsPage() {
         // If deleted row was being edited, reset edit form.
         cancelEdit()
       }
-      setMessage('Incident deleted successfully.')
+      // Match delete confirmation style with native browser popup.
+      window.alert('Incident deleted successfully.')
       await loadMyIncidents()
     } catch (err) {
       setError(err.message || 'Could not delete incident')
@@ -334,8 +307,6 @@ export default function StudentIncidentsPage() {
 
       {/* Form card: create new incident or edit pending one. */}
       <section className="dash-card incident-form-card">
-        {/* Success message from create/update/delete actions. */}
-        {message ? <div className="dash-msg success">{message}</div> : null}
         {/* Error message from API failures. */}
         {error ? <div className="dash-msg error">{error}</div> : null}
 
@@ -470,13 +441,6 @@ export default function StudentIncidentsPage() {
               ) : null}
             </div>
           </div>
-
-          {/* Inline toast for submit/remove feedback inside the form. */}
-          {formToast.message ? (
-            <div className={`incident-inline-toast ${formToast.type || 'success'}`}>
-              {formToast.message}
-            </div>
-          ) : null}
 
           {/* Main submit button switches text by mode and loading state. */}
           <button className="incident-submit-btn" type="submit" disabled={loading}>
