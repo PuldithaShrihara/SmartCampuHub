@@ -161,21 +161,27 @@ export default function StudentIncidentsPage() {
   }
 
   function validateForm() {
+    // Collect every field validation error first; submit only when object stays empty.
     const nextErrors = {}
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+    // Validation A: title must be descriptive enough for technician triage.
     if (title.trim().length < 10) {
       nextErrors.title = 'Title must be at least 10 characters'
     }
+    // Validation B: description should include enough detail for faster resolution.
     if (description.trim().length < 20) {
       nextErrors.description = 'Description must be at least 20 characters'
     }
+    // Validation C: email must remain a valid contact value.
     if (!emailRegex.test(email.trim())) {
       nextErrors.email = 'Please enter a valid email address'
     }
+    // Validation D: user must explicitly choose a resource (default option is empty).
     if (!resourceId.trim()) {
       nextErrors.resourceId = 'Please select a resource'
     }
+    // Validation E: optional attachment must match allowed types/size before upload.
     if (file && !allowedFileTypes.includes(file.type)) {
       nextErrors.file = 'Only image or PDF files are allowed'
     } else if (file && file.size > maxFileSizeBytes) {

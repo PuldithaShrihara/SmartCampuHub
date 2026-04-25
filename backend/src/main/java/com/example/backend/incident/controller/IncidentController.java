@@ -41,6 +41,7 @@ public class IncidentController {
 			@RequestParam("resourceId") String resourceId,
 			@RequestParam(value = "file", required = false) MultipartFile file,
 			@RequestParam(value = "attachment", required = false) MultipartFile attachment) {
+		// Frontend link: StudentIncidentsPage -> incidentApi.createIncident() -> POST /api/incidents.
 		// Read logged-in user from JWT context; frontend token decides who is creating.
 		String email = authenticatedEmail();
 		// Support both parameter names for compatibility with different frontend payloads.
@@ -52,6 +53,7 @@ public class IncidentController {
 
 	@GetMapping("/my")
 	public ResponseEntity<ApiResponse<List<IncidentResponseDto>>> getMyIncidents() {
+		// Frontend link: StudentIncidentsPage -> incidentApi.getMyIncidents() -> GET /api/incidents/my.
 		// Returns incidents belonging to current authenticated user only.
 		String email = authenticatedEmail();
 		List<IncidentResponseDto> data = incidentService.getMyIncidents(email);
@@ -62,6 +64,7 @@ public class IncidentController {
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> updateMyPendingIncident(
 			@PathVariable("id") String id,
 			@RequestBody IncidentStudentUpdateRequest request) {
+		// Frontend link: StudentIncidentsPage edit flow -> incidentApi.updateMyIncident().
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.updateMyPendingIncident(id, request, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident updated successfully", data));
@@ -69,6 +72,7 @@ public class IncidentController {
 
 	@DeleteMapping("/my/{id}")
 	public ResponseEntity<ApiResponse<Object>> deleteMyPendingIncident(@PathVariable("id") String id) {
+		// Frontend link: StudentIncidentsPage delete action -> incidentApi.deleteMyIncident().
 		String email = authenticatedEmail();
 		incidentService.deleteMyPendingIncident(id, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident deleted successfully", null));
@@ -77,6 +81,7 @@ public class IncidentController {
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<IncidentResponseDto>>> getAllIncidents(
 			@RequestParam(value = "status", required = false) String status) {
+		// Frontend link: TicketsPage / TechnicianTicketsPage -> incidentApi.getAllIncidents().
 		// Used by admin/technician flows; service applies role-based filtering/authorization.
 		String email = authenticatedEmail();
 		List<IncidentResponseDto> data = incidentService.getAllIncidents(status, email);
@@ -87,6 +92,7 @@ public class IncidentController {
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> updateIncident(
 			@PathVariable("id") String id,
 			@RequestBody IncidentUpdateRequest request) {
+		// Frontend link: TicketsPage / TechnicianTicketsPage -> incidentApi.updateIncident().
 		// Central update endpoint for status updates, technician remarks, and assignment changes.
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.updateIncident(id, request, email);
@@ -95,6 +101,7 @@ public class IncidentController {
 
 	@PostMapping("/{id}/accept")
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> acceptIncident(@PathVariable("id") String id) {
+		// Frontend link: TechnicianTicketsPage -> incidentApi.acceptIncidentAssignment().
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.acceptAssignedIncident(id, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment accepted", data));
@@ -102,6 +109,7 @@ public class IncidentController {
 
 	@PostMapping("/{id}/decline")
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> declineIncident(@PathVariable("id") String id) {
+		// Frontend link: TechnicianTicketsPage -> incidentApi.declineIncidentAssignment().
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.declineAssignedIncident(id, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment declined", data));

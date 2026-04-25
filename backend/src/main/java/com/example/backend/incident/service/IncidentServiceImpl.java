@@ -59,10 +59,12 @@ public class IncidentServiceImpl implements IncidentService {
 		User currentUser = requireCurrentUser(authenticatedEmail);
 		requireUserRole(currentUser);
 
+		// Check required fields: title, description, and resource.
 		if (isBlank(title) || isBlank(description) || isBlank(resourceId)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, and resourceId are required");
 		}
 
+		// Check resourceId is valid (resource must exist in database).
 		resourceRepository.findById(resourceId.trim())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid resourceId"));
 
@@ -82,7 +84,10 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 
 		Incident savedIncident = incidentRepository.save(incident);
+		// Student confirmation notification.
 		notifyIncidentSubmitted(currentUser.getEmail(), savedIncident.getTitle());
+		// Role-wide broadcast: let admins and technicians know a new ticket is available.
+		notifyAdminAndTechnicianOnIncidentCreated(savedIncident, currentUser);
 		return toIncidentData(savedIncident, false, true, false);
 	}
 
@@ -127,18 +132,22 @@ public class IncidentServiceImpl implements IncidentService {
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
 
+		// Validation 3: owner check (students can edit only their own incidents).
 		if (!currentUser.getId().equals(incident.getUserId())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own incidents");
 		}
+		// Validation 4: state check (only pending incidents are editable by students).
 		if (incident.getStatus() != IncidentStatus.PENDING) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending incidents can be updated");
 		}
 
+		// Validation 5: required payload fields for update.
 		if (isBlank(request.getTitle()) || isBlank(request.getDescription()) || isBlank(request.getResourceId())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title, description, and resourceId are required");
 		}
 
 		String resourceId = request.getResourceId().trim();
+		// Validation 6: updated resource id must map to an existing resource.
 		resourceRepository.findById(resourceId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid resourceId"));
 
@@ -158,9 +167,11 @@ public class IncidentServiceImpl implements IncidentService {
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
 
+		// Validation 7: owner check for delete operation.
 		if (!currentUser.getId().equals(incident.getUserId())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own incidents");
 		}
+		// Validation 8: only pending incidents can be deleted by students.
 		if (incident.getStatus() != IncidentStatus.PENDING) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending incidents can be deleted");
 		}
@@ -195,14 +206,17 @@ public class IncidentServiceImpl implements IncidentService {
 
 		if (currentUser.getRole() == Role.ADMIN) {
 			if (request.getAssignedTo() != null) {
+				// Validation 9 (inside helper): assignment target must be a valid technician.
 				applyAssignedTechnician(incident, request.getAssignedTo(), currentUser.getId());
 			}
 		} else if (currentUser.getRole() == Role.TECHNICIAN) {
+			// Validation 10: prevent non-assigned technicians from editing someone else's ticket.
 			if (!isBlank(incident.getAssignedTo()) && !currentUser.getId().equals(incident.getAssignedTo())) {
 				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is assigned to another technician");
 			}
 			IncidentAssignmentStatus effectiveStatus = effectiveAssignmentStatus(incident);
 			if (request.getStatus() != null) {
+				// Validation 11: technician must accept assignment before changing status.
 				if (!isBlank(incident.getAssignedTo())
 						&& effectiveStatus == IncidentAssignmentStatus.ASSIGNED) {
 					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Accept the assignment before updating status");
@@ -210,6 +224,7 @@ public class IncidentServiceImpl implements IncidentService {
 				incident.setStatus(parseStatus(request.getStatus()));
 			}
 			if (request.getTechnicianRemarks() != null) {
+				// Validation 12: technician must accept assignment before adding remarks.
 				if (!isBlank(incident.getAssignedTo())
 						&& effectiveStatus == IncidentAssignmentStatus.ASSIGNED) {
 					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Accept the assignment before adding remarks");
@@ -229,6 +244,10 @@ public class IncidentServiceImpl implements IncidentService {
 				&& !safeText(saved.getAssignedTo()).equals(safeText(previousAssignee))) {
 			notifyTechnicianAssigned(saved);
 		}
+		// When technician updates status/remarks, notify student and admin watcher.
+		if (currentUser.getRole() == Role.TECHNICIAN) {
+			notifyOnTechnicianProgress(saved, currentUser);
+		}
 		return toIncidentData(saved, true, true, true);
 	}
 
@@ -239,9 +258,11 @@ public class IncidentServiceImpl implements IncidentService {
 
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+		// Validation 13: ticket must be assigned to this technician.
 		if (isBlank(incident.getAssignedTo()) || !currentUser.getId().equals(incident.getAssignedTo())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is not assigned to you");
 		}
+		// Validation 14: only "ASSIGNED" items can be accepted.
 		if (effectiveAssignmentStatus(incident) != IncidentAssignmentStatus.ASSIGNED) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incident assignment is not pending acceptance");
 		}
@@ -259,9 +280,11 @@ public class IncidentServiceImpl implements IncidentService {
 
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+		// Validation 15: ticket must be assigned to this technician.
 		if (isBlank(incident.getAssignedTo()) || !currentUser.getId().equals(incident.getAssignedTo())) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This incident is not assigned to you");
 		}
+		// Validation 16: only "ASSIGNED" items can be declined.
 		if (effectiveAssignmentStatus(incident) != IncidentAssignmentStatus.ASSIGNED) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incident assignment is not pending acceptance");
 		}
@@ -283,6 +306,7 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 		User assignee = userRepository.findById(assignedTo)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid assignedTo user id"));
+		// Validation 17: incidents can be assigned only to technician role.
 		if (assignee.getRole() != Role.TECHNICIAN) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incidents can only be assigned to technicians");
 		}
@@ -322,6 +346,7 @@ public class IncidentServiceImpl implements IncidentService {
 		try {
 			return IncidentStatus.fromValue(raw);
 		} catch (Exception ex) {
+			// Validation 18: reject unsupported status transitions/labels from client.
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Invalid status. Allowed values: Pending, In Progress, Resolved");
 		}
@@ -329,6 +354,7 @@ public class IncidentServiceImpl implements IncidentService {
 
 	private void validateAttachment(MultipartFile file) {
 		String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+		// Validation 19: enforce allowed upload MIME types at backend boundary.
 		boolean allowed = contentType.equals("application/pdf")
 				|| contentType.equals("image/jpeg")
 				|| contentType.equals("image/png")
@@ -337,6 +363,58 @@ public class IncidentServiceImpl implements IncidentService {
 		if (!allowed) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only image and PDF files are allowed");
 		}
+	}
+
+	private void notifyAdminAndTechnicianOnIncidentCreated(Incident incident, User reporter) {
+		String title = safeText(incident.getTitle());
+		String reporterName = safeText(reporter.getFullName()).isEmpty() ? reporter.getEmail() : reporter.getFullName();
+		String message = title.isEmpty()
+				? "New incident ticket was submitted by " + reporterName + "."
+				: "New incident ticket submitted by " + reporterName + ": \"" + title + "\".";
+
+		// Admin notifications: all admins should see newly submitted incidents.
+		for (User admin : userRepository.findByRole(Role.ADMIN)) {
+			if (isBlank(admin.getEmail())) {
+				continue;
+			}
+			try {
+				notificationService.createForUser(new CreateNotificationRequest(
+						message,
+						admin.getEmail().trim(),
+						NotificationType.TICKET));
+			} catch (Exception ex) {
+				log.warn("Could not notify admin {} for incident creation: {}", admin.getId(), ex.getMessage());
+			}
+		}
+
+		// Technician notifications: announce a new ticket is available in the queue.
+		for (User technician : userRepository.findByRole(Role.TECHNICIAN)) {
+			if (isBlank(technician.getEmail())) {
+				continue;
+			}
+			try {
+				notificationService.createForUser(new CreateNotificationRequest(
+						message,
+						technician.getEmail().trim(),
+						NotificationType.TICKET));
+			} catch (Exception ex) {
+				log.warn("Could not notify technician {} for incident creation: {}", technician.getId(), ex.getMessage());
+			}
+		}
+	}
+
+	private void notifyOnTechnicianProgress(Incident incident, User technician) {
+		String technicianName = safeText(technician.getFullName()).isEmpty() ? technician.getEmail() : technician.getFullName();
+		String title = safeText(incident.getTitle());
+		String status = incident.getStatus() == null ? "updated" : incident.getStatus().getValue();
+		String message = title.isEmpty()
+				? technicianName + " updated your incident ticket to " + status + "."
+				: technicianName + " updated incident \"" + title + "\" to " + status + ".";
+
+		// Student gets progress updates for their own ticket.
+		notifyIncidentRelatedUser(incident.getUserId(), message);
+		// Admin who assigned/owns workflow visibility also gets progress updates.
+		notifyIncidentRelatedUser(incident.getAssignedBy(), message);
 	}
 
 	private IncidentResponseDto toIncidentData(Incident incident, boolean includeUser, boolean includeResource,
