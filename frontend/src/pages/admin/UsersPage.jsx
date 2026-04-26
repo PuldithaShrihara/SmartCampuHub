@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { adminCreateUser, adminHardDeleteUser, adminListUsers } from '../../api/auth.js'
-import { useToast } from '../../components/toastContext.js'
 import '../../styles/DashboardLayout.css'
 
 const emptyForm = { fullName: '', email: '', password: '', role: 'TECHNICIAN' }
 
 export default function UsersPage() {
-  const { pushToast } = useToast()
   const [users, setUsers] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
@@ -34,10 +32,10 @@ export default function UsersPage() {
       await adminCreateUser(form)
       setForm(emptyForm)
       setMessage({ type: 'success', text: 'User added successfully.' })
-      pushToast({ type: 'success', message: 'User added successfully.' })
+      window.alert('User added successfully.')
       await loadUsers()
     } catch (err) {
-      pushToast({ type: 'error', message: err.message || 'Could not add user.' })
+      window.alert(err.message || 'Could not add user.')
       setMessage({
         type: 'error',
         text: err.message || 'Could not add user',
@@ -56,11 +54,11 @@ export default function UsersPage() {
     setMessage({ type: '', text: '' })
     try {
       await adminHardDeleteUser(item.id)
-      pushToast({ type: 'success', message: 'User permanently deleted.' })
+      window.alert('User permanently deleted.')
       setMessage({ type: 'success', text: 'User permanently deleted.' })
       await loadUsers()
     } catch (err) {
-      pushToast({ type: 'error', message: err.message || 'Could not delete user.' })
+      window.alert(err.message || 'Could not delete user.')
       setMessage({ type: 'error', text: err.message || 'Could not delete user.' })
     } finally {
       setDeletingId('')

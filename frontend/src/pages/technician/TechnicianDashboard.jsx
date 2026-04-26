@@ -12,8 +12,7 @@ import Sidebar from '../../components/common/Sidebar.jsx'
 import Header from '../../components/common/Header.jsx'
 import { useAuth } from '../../context/useAuth.js'
 import { logout as clearSession } from '../../api/authApi.js'
-import { getUnreadNotificationCount, listNotifications } from '../../api/notifications.js'
-import { useToast } from '../../components/toastContext.js'
+import { getUnreadNotificationCount } from '../../api/notifications.js'
 import TechnicianHome from './TechnicianHome.jsx'
 import TechnicianTicketsPage from './TechnicianTicketsPage.jsx'
 import TechnicianCalendarPage from './TechnicianCalendarPage.jsx'
@@ -25,7 +24,6 @@ import '../../styles/StudentDashboard.css'
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { pushToast } = useToast()
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const previousUnreadRef = useRef(0)
 
@@ -68,21 +66,6 @@ export default function TechnicianDashboard() {
         const count = res?.count || 0
         if (!cancelled) {
           setUnreadNotifications(count)
-          if (count > previousUnreadRef.current) {
-            try {
-              const notifications = await listNotifications()
-              const latestUnread = Array.isArray(notifications)
-                ? notifications.find((n) => !n?.readAt)
-                : null
-              if (latestUnread?.message) {
-                pushToast({ type: 'success', message: latestUnread.message })
-              } else {
-                pushToast({ type: 'success', message: 'You have new notifications.' })
-              }
-            } catch {
-              pushToast({ type: 'success', message: 'You have new notifications.' })
-            }
-          }
           previousUnreadRef.current = count
         }
       } catch {
@@ -97,7 +80,7 @@ export default function TechnicianDashboard() {
       window.clearInterval(intervalId)
       window.removeEventListener('notifications:changed', loadUnread)
     }
-  }, [pushToast])
+  }, [])
 
   return (
     <div className="dashboard-container">

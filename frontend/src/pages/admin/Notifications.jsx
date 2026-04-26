@@ -5,12 +5,9 @@ import {
   adminCreateNotification,
 } from '../../api/notificationApi.js'
 import NotificationInbox from '../../components/notification/NotificationInbox.jsx'
-import { useToast } from '../../components/toastContext.js'
 import '../../styles/AdminNotificationsPage.css'
 
 export default function Notifications() {
-  // Toast helper to show quick success/error messages.
-  const { pushToast } = useToast()
   const [compose, setCompose] = useState({
     targetMode: 'single',
     targetRole: 'STUDENT',
@@ -24,15 +21,15 @@ export default function Notifications() {
     e.preventDefault()
     const message = compose.message.trim()
     if (!message) {
-      pushToast({ type: 'error', message: 'Message is required.' })
+      window.alert('Message is required.')
       return
     }
     if (message.length > 1000) {
-      pushToast({ type: 'error', message: 'Message must be at most 1000 characters.' })
+      window.alert('Message must be at most 1000 characters.')
       return
     }
     if (compose.targetMode === 'single' && !compose.userEmail.trim()) {
-      pushToast({ type: 'error', message: 'Target user email is required.' })
+      window.alert('Target user email is required.')
       return
     }
 
@@ -55,7 +52,7 @@ export default function Notifications() {
           type: compose.type,
         })
       }
-      pushToast({ type: 'success', message: 'Notification sent successfully.' })
+      window.alert('Notification sent successfully.')
       setCompose((prev) => ({
         ...prev,
         userEmail: '',
@@ -64,7 +61,7 @@ export default function Notifications() {
       }))
       window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
-      pushToast({ type: 'error', message: err.message || 'Could not send notification.' })
+      window.alert(err.message || 'Could not send notification.')
     } finally {
       setSending(false)
     }

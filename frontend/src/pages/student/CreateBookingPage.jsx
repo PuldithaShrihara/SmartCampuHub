@@ -5,13 +5,11 @@ import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingF
 import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
 import { createEquipmentBooking, createSpaceBooking } from '../../api/bookingApi.js'
 import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
-import { useToast } from '../../components/toastContext.js'
 import { useAuth } from '../../context/useAuth.js'
 
 export default function CreateBookingPage() {
   const location = useLocation()
   const preselectedResourceId = location.state?.preselectedResourceId
-  const { pushToast } = useToast()
   const { preferences } = useAuth()
   const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
@@ -74,9 +72,9 @@ export default function CreateBookingPage() {
     try {
       setSubmitting(true)
       await createSpaceBooking(payload)
-      pushToast({ type: 'success', message: 'Space booking request created successfully.' })
+      window.alert('Space booking request created successfully.')
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Failed to create space booking.' })
+      window.alert(err?.message || 'Failed to create space booking.')
     } finally {
       setSubmitting(false)
     }
@@ -86,9 +84,9 @@ export default function CreateBookingPage() {
     try {
       setSubmitting(true)
       await createEquipmentBooking(payload)
-      pushToast({ type: 'success', message: 'Equipment booking request created successfully.' })
+      window.alert('Equipment booking request created successfully.')
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Failed to create equipment booking.' })
+      window.alert(err?.message || 'Failed to create equipment booking.')
     } finally {
       setSubmitting(false)
     }

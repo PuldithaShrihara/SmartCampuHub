@@ -96,6 +96,14 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponse> getAllBookings() {
         List<Booking> bookings = bookingRepository.findAll();
+        List<Booking> toBackfillCheckedIn = bookings.stream()
+                .filter(booking -> booking.getQrScannedAt() != null)
+                .filter(booking -> booking.getStatus() != BookingStatus.CHECKED_IN)
+                .toList();
+        if (!toBackfillCheckedIn.isEmpty()) {
+            toBackfillCheckedIn.forEach(booking -> booking.setStatus(BookingStatus.CHECKED_IN));
+            bookingRepository.saveAll(toBackfillCheckedIn);
+        }
         List<String> malformedIds = bookings.stream()
                 .filter(booking -> booking.getResource() == null)
                 .map(Booking::getId)
@@ -201,27 +209,33 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found for QR token");
         }
 
-        if (booking.getStatus() != BookingStatus.APPROVED) {
-            log.warn("QR verification rejected. Booking is not approved. bookingId='{}', status='{}'",
-                    booking.getId(), booking.getStatus());
-            throw new ResponseStatusException(HttpStatus.GONE, "QR is no longer valid for this booking status");
-        }
-
         if (booking.getQrToken() == null || booking.getQrToken().isBlank()) {
             log.warn("QR verification rejected. Booking has no stored QR token. bookingId='{}'", booking.getId());
             throw new ResponseStatusException(HttpStatus.GONE, "QR is not active for this booking");
         }
 
         if (booking.getQrScannedAt() != null) {
+            // Backfill legacy records: if already scanned but status is still APPROVED, normalize to CHECKED_IN.
+            if (booking.getStatus() != BookingStatus.CHECKED_IN) {
+                booking.setStatus(BookingStatus.CHECKED_IN);
+                booking = bookingRepository.save(booking);
+            }
             log.info("QR verification already scanned. bookingId='{}', scannedAt='{}'",
                     booking.getId(), booking.getQrScannedAt());
             return new QrLookupResponse(bookingMapper.toResponse(booking), true);
         }
 
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            log.warn("QR verification rejected. Booking is not approved. bookingId='{}', status='{}'",
+                    booking.getId(), booking.getStatus());
+            throw new ResponseStatusException(HttpStatus.GONE, "QR is no longer valid for this booking status");
+        }
+
         booking.setQrScannedAt(Instant.now());
+        booking.setStatus(BookingStatus.CHECKED_IN);
         Booking saved = bookingRepository.save(booking);
-        log.info("QR verification success. Marked scanned. bookingId='{}', scannedAt='{}'",
-                saved.getId(), saved.getQrScannedAt());
+        log.info("QR verification success. Marked checked-in. bookingId='{}', status='{}', scannedAt='{}'",
+                saved.getId(), saved.getStatus(), saved.getQrScannedAt());
         return new QrLookupResponse(bookingMapper.toResponse(saved), false);
     }
 

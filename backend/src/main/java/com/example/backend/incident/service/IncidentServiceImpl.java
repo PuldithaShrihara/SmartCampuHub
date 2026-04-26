@@ -84,8 +84,7 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 
 		Incident savedIncident = incidentRepository.save(incident);
-		// Send success notification to student.
-		notifyIncidentSubmitted(currentUser.getEmail(), savedIncident.getTitle());
+		// Do not create submit-success notification for reporter to avoid duplicate popup messages.
 		// Also notify admins and technicians about new ticket.
 		notifyAdminAndTechnicianOnIncidentCreated(savedIncident, currentUser);
 		return toIncidentData(savedIncident, false, true, false);

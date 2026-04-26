@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa'
-import { useToast } from '../../components/toastContext.js'
 import {
   fetchResources,
   createResource,
@@ -10,10 +9,9 @@ import {
 import './ResourcesPage.css'
 
 export default function ResourcesPage() {
-  const { pushToast } = useToast()
-  const showToast = React.useCallback((message, type='success') => {
-    pushToast({ type, message })
-  }, [pushToast])
+  const showDialog = React.useCallback((message) => {
+    window.alert(message)
+  }, [])
   const formatType = (type) => (typeof type === 'string' ? type.replace(/_/g, ' ') : 'N/A')
   const formatStatus = (status) => (typeof status === 'string' ? status.replace(/_/g, ' ') : 'UNKNOWN')
   const statusClass = (status) =>
@@ -135,9 +133,9 @@ export default function ResourcesPage() {
       setResources(Array.isArray(data) ? data : [])
     } catch {
       setResources([])
-      showToast('Failed to load resources', 'error')
+      showDialog('Failed to load resources')
     }
-  }, [filters, showToast])
+  }, [filters, showDialog])
 
   useEffect(() => {
     loadResources()
@@ -226,7 +224,7 @@ export default function ResourcesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!isFormValid) {
-      showToast('Please fix the validation errors before saving.', 'error')
+      showDialog('Please fix the validation errors before saving.')
       return
     }
     try {
@@ -247,15 +245,15 @@ export default function ResourcesPage() {
       
       if (editingResource) {
         await updateResource(editingResource.id, payload, photoFile)
-        showToast('Resource updated successfully', 'success')
+        showDialog('Resource updated successfully')
       } else {
         await createResource(payload, photoFile)
-        showToast('Resource created successfully', 'success')
+        showDialog('Resource created successfully')
       }
       handleCloseModal()
       loadResources()
     } catch (err) {
-      showToast(err.message || 'Failed to save resource', 'error')
+      showDialog(err.message || 'Failed to save resource')
     }
   }
 
@@ -263,10 +261,10 @@ export default function ResourcesPage() {
     if (window.confirm('Are you sure you want to delete this resource?')) {
       try {
         await deleteResource(id)
-        showToast('Resource deleted', 'success')
+        showDialog('Resource deleted')
         loadResources()
       } catch {
-        showToast('Failed to delete resource', 'error')
+        showDialog('Failed to delete resource')
       }
     }
   }
