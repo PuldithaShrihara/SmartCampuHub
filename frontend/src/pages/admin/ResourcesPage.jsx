@@ -50,7 +50,25 @@ export default function ResourcesPage() {
       .map((slot) => slot.trim())
       .filter(Boolean)
   }
-  const isValidTimeRange = (slot) => /^\d{2}:\d{2}-\d{2}:\d{2}$/.test(slot)
+  const DAY_START_MINUTES = 8 * 60 + 30 // 08:30
+  const DAY_END_MINUTES = 17 * 60 + 30 // 17:30
+  const parseTimeToMinutes = (text) => {
+    const [hh, mm] = text.split(':').map(Number)
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null
+    return hh * 60 + mm
+  }
+  const isValidTimeRange = (slot) => {
+    const match = slot.match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/)
+    if (!match) return false
+    const start = parseTimeToMinutes(match[1])
+    const end = parseTimeToMinutes(match[2])
+    if (start == null || end == null) return false
+    if (start >= end) return false
+    if (start < DAY_START_MINUTES) return false
+    if (end > DAY_END_MINUTES) return false
+    return true
+  }
   const formErrors = React.useMemo(() => {
     const errors = {}
     const name = formData.name.trim()
@@ -75,6 +93,8 @@ export default function ResourcesPage() {
         errors.capacity = 'Capacity is required.'
       } else if (Number.isNaN(capacity) || capacity < 1) {
         errors.capacity = 'Capacity must be at least 1.'
+      } else if (formData.type === 'LECTURE_HALL' && capacity <= 50) {
+        errors.capacity = 'Lecture hall capacity must be greater than 50.'
       }
       if (!['LECTURE_HALL', 'LAB', 'MEETING_ROOM'].includes(formData.type)) {
         errors.type = 'Please select a valid type.'
@@ -97,7 +117,8 @@ export default function ResourcesPage() {
     if (windows.length === 0) {
       errors.availabilityWindows = 'At least one availability window is required.'
     } else if (windows.some((slot) => !isValidTimeRange(slot))) {
-      errors.availabilityWindows = 'Use HH:MM-HH:MM format, separated by commas.'
+      errors.availabilityWindows =
+        'Use HH:MM-HH:MM format, keep each range between 08:30 and 17:30.'
     }
 
     if (!['ACTIVE', 'OUT_OF_SERVICE', 'UNDER_MAINTENANCE'].includes(formData.status)) {
