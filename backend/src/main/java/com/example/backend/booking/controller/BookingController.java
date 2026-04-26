@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
+import com.example.backend.booking.dto.QrLookupResponse;
 import com.example.backend.booking.dto.BookingStatusUpdateRequest;
 import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.common.response.ApiResponse;
@@ -62,8 +63,9 @@ public class BookingController {
 
     @GetMapping("/qr/{token}")
     public ResponseEntity<ApiResponse<BookingResponse>> getBookingByQrToken(@PathVariable("token") String token) {
-        BookingResponse data = bookingService.getBookingByQrToken(token);
-        return ResponseEntity.ok(new ApiResponse<>(true, "QR verified successfully", data));
+        QrLookupResponse lookup = bookingService.getBookingByQrToken(token);
+        String message = lookup.alreadyScanned() ? "QR already scanned" : "QR verified successfully";
+        return ResponseEntity.ok(new ApiResponse<>(true, message, lookup.booking()));
     }
 
     @PutMapping("/{bookingId}/status")

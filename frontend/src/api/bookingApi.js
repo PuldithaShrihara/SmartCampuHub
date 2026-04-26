@@ -42,7 +42,15 @@ export async function getBookingByQrToken(token) {
     }
     const res = await apiGetAuth(`/api/bookings/qr/${encodeURIComponent(normalized)}`)
     if (res && typeof res === 'object' && 'data' in res) {
-        return res.data
+        return {
+            success: Boolean(res.success),
+            message: String(res.message || ''),
+            data: res.data ?? null,
+        }
     }
-    return res
+    return {
+        success: true,
+        message: '',
+        data: res ?? null,
+    }
 }
