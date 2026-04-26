@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchResources } from '../../api/resourceApi.js'
+import { useAuth } from '../../context/useAuth.js'
 import './BookingGridViewPage.css'
 
 function normalizeResources(data) {
@@ -63,10 +64,15 @@ function sortByLocationCode(a, b) {
 
 export default function BookingGridViewPage() {
   const navigate = useNavigate()
+  const { preferences } = useAuth()
+  const initialViewMode = useMemo(() => {
+    const pref = String(preferences?.defaultResourceCategory || '').toUpperCase()
+    return pref === 'EQUIPMENT' ? 'EQUIPMENT' : 'SPACE'
+  }, [preferences?.defaultResourceCategory])
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [viewMode, setViewMode] = useState('SPACE')
+  const [viewMode, setViewMode] = useState(initialViewMode)
 
   useEffect(() => {
     let cancelled = false

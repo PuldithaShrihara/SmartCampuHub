@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { deleteBooking, getAllBookings, updateBookingStatus } from '../../api/bookingApi.js'
+import { useToast } from '../../components/toastContext.js'
 import '../student/MyBookingsPage.css'
 import './AllBookingsPage.css'
 
 export default function AllBookingsPage() {
+  const { pushToast } = useToast()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -39,13 +41,20 @@ export default function AllBookingsPage() {
       if (nextStatus === 'REJECTED') {
         rejectionReason = window.prompt('Enter rejection reason:', 'Rejected by admin') || ''
       }
-      const updated = await updateBookingStatus(bookingId, nextStatus, rejectionReason)
-      setBookings((prev) => prev.map((item) => (item.id === bookingId ? updated : item)))
+      await updateBookingStatus(bookingId, nextStatus, rejectionReason)
+      await loadBookings()
+      if (nextStatus === 'APPROVED') {
+        pushToast({ type: 'success', message: 'Booking approved successfully' })
+      } else if (nextStatus === 'REJECTED') {
+        pushToast({ type: 'success', message: 'Booking rejected successfully' })
+      } else {
+        pushToast({ type: 'success', message: 'Booking status updated successfully' })
+      }
       return true
     } catch (err) {
       const message = err.message || 'Failed to update booking status'
       setActionError(message)
-      window.alert(message)
+      pushToast({ type: 'error', message: 'Failed to update booking status' })
       return false
     } finally {
       setUpdatingId(null)
@@ -64,7 +73,7 @@ export default function AllBookingsPage() {
     } catch (err) {
       const message = err.message || 'Failed to delete booking'
       setActionError(message)
-      window.alert(message)
+      pushToast({ type: 'error', message })
     } finally {
       setUpdatingId(null)
     }
@@ -184,7 +193,7 @@ export default function AllBookingsPage() {
     try {
       window.print()
     } catch (err) {
-      window.alert(err?.message || 'Failed to open print dialog.')
+      pushToast({ type: 'error', message: err?.message || 'Failed to open print dialog.' })
     }
   }
 

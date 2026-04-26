@@ -67,17 +67,35 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/status")
-    public ResponseEntity<BookingResponse> updateBookingStatus(
+    public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(
             @PathVariable String bookingId,
             @Valid @RequestBody BookingStatusUpdateRequest request) {
-        BookingStatus status;
-        try {
-            status = BookingStatus.valueOf(request.status().trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().build();
+        String rawStatus = request.status() == null ? "" : request.status().trim();
+        if (rawStatus.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, "Status is required", null));
         }
 
-        return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, status, request.rejectionReason()));
+        BookingStatus status;
+        try {
+            status = BookingStatus.valueOf(rawStatus.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false,
+                            "Invalid status. Allowed values: PENDING, APPROVED, REJECTED, CANCELLED",
+                            null));
+        }
+
+        BookingResponse updated = bookingService.updateBookingStatus(bookingId, status, request.rejectionReason());
+        String message;
+        if (status == BookingStatus.APPROVED) {
+            message = "Booking approved successfully";
+        } else if (status == BookingStatus.REJECTED) {
+            message = "Booking rejected successfully";
+        } else {
+            message = "Booking status updated successfully";
+        }
+        return ResponseEntity.ok(new ApiResponse<>(true, message, updated));
     }
 
     @DeleteMapping("/{bookingId}")

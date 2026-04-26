@@ -6,11 +6,13 @@ import CreateEquipmentBookingForm from '../../components/booking/CreateEquipment
 import { createEquipmentBooking, createSpaceBooking } from '../../api/bookingApi.js'
 import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
 import { useToast } from '../../components/toastContext.js'
+import { useAuth } from '../../context/useAuth.js'
 
 export default function CreateBookingPage() {
   const location = useLocation()
   const preselectedResourceId = location.state?.preselectedResourceId
   const { pushToast } = useToast()
+  const { preferences } = useAuth()
   const [bookingCategory, setBookingCategory] = useState('')
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(false)
@@ -21,8 +23,13 @@ export default function CreateBookingPage() {
     const initialCategory = String(location.state?.initialCategory || '').toUpperCase()
     if (initialCategory === 'SPACE' || initialCategory === 'EQUIPMENT') {
       setBookingCategory(initialCategory)
+      return
     }
-  }, [location.state])
+    const preferredCategory = String(preferences?.defaultResourceCategory || '').toUpperCase()
+    if (preferredCategory === 'SPACE' || preferredCategory === 'EQUIPMENT') {
+      setBookingCategory(preferredCategory)
+    }
+  }, [location.state, preferences?.defaultResourceCategory])
 
   useEffect(() => {
     if (!bookingCategory) {

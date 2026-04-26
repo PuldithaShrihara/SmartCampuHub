@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   FaCalendar,
   FaChartBar,
@@ -25,13 +25,16 @@ import StatisticsPage from './StatisticsPage.jsx'
 import SettingsPage from './SettingsPage.jsx'
 import VenueAnalysisPage from './VenueAnalysisPage.jsx'
 import ScanQrPage from './ScanQrPage.jsx'
-import { getUnreadNotificationCount } from '../../api/notifications.js'
+import { getUnreadNotificationCount, listNotifications } from '../../api/notifications.js'
+import { useToast } from '../../components/toastContext.js'
 import '../../styles/StudentDashboard.css'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { pushToast } = useToast()
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const previousUnreadRef = useRef(0)
 
   const menuItems = [
     { label: 'Dashboard', icon: FaHome, path: '/admin', end: true },
@@ -55,18 +58,39 @@ export default function AdminDashboard() {
     async function loadUnread() {
       try {
         const res = await getUnreadNotificationCount()
-        if (!cancelled) setUnreadNotifications(res?.count || 0)
+        const count = res?.count || 0
+        if (!cancelled) {
+          setUnreadNotifications(count)
+          if (count > previousUnreadRef.current) {
+            try {
+              const notifications = await listNotifications()
+              const latestUnread = Array.isArray(notifications)
+                ? notifications.find((n) => !n?.readAt)
+                : null
+              if (latestUnread?.message) {
+                pushToast({ type: 'success', message: latestUnread.message })
+              } else {
+                pushToast({ type: 'success', message: 'You have new notifications.' })
+              }
+            } catch {
+              pushToast({ type: 'success', message: 'You have new notifications.' })
+            }
+          }
+          previousUnreadRef.current = count
+        }
       } catch {
         if (!cancelled) setUnreadNotifications(0)
       }
     }
     loadUnread()
+    const intervalId = window.setInterval(loadUnread, 15000)
     window.addEventListener('notifications:changed', loadUnread)
     return () => {
       cancelled = true
+      window.clearInterval(intervalId)
       window.removeEventListener('notifications:changed', loadUnread)
     }
-  }, [])
+  }, [pushToast])
 
   return (
     <div className="dashboard-container">

@@ -1,117 +1,159 @@
-import { useEffect, useState } from 'react'
-import { listNotifications, markNotificationRead } from '../../api/notifications.js'
+import { useState } from 'react'
+import {
+  adminBroadcastNotification,
+  adminBroadcastNotificationToRole,
+  adminCreateNotification,
+} from '../../api/notificationApi.js'
+import NotificationInbox from '../../components/notification/NotificationInbox.jsx'
 import { useToast } from '../../components/toastContext.js'
+import '../../styles/AdminNotificationsPage.css'
 
 export default function Notifications() {
   // Toast helper to show quick success/error messages.
   const { pushToast } = useToast()
-  // Notification list data.
-  const [notifications, setNotifications] = useState([])
-  // Loading flag while fetching table data.
-  const [loading, setLoading] = useState(false)
-  // Error text shown if API call fails.
-  const [error, setError] = useState('')
+  const [compose, setCompose] = useState({
+    targetMode: 'single',
+    targetRole: 'STUDENT',
+    userEmail: '',
+    message: '',
+    type: 'SYSTEM',
+  })
+  const [sending, setSending] = useState(false)
 
-  async function load() {
-    // Method purpose: load notifications for current logged-in admin.
-    setLoading(true)
-    // Clear any previous error before new request.
-    setError('')
-    try {
-      // Request notifications from backend.
-      const res = await listNotifications()
-      // Validate payload shape to keep notification table resilient to API wrapper variations.
-      setNotifications(Array.isArray(res) ? res : [])
-    } catch (err) {
-      // Keep readable fallback message.
-      setError(err.message || 'Failed to load notifications')
-    } finally {
-      // Always stop loading state.
-      setLoading(false)
+  async function handleSend(e) {
+    e.preventDefault()
+    const message = compose.message.trim()
+    if (!message) {
+      pushToast({ type: 'error', message: 'Message is required.' })
+      return
     }
-  }
+    if (message.length > 1000) {
+      pushToast({ type: 'error', message: 'Message must be at most 1000 characters.' })
+      return
+    }
+    if (compose.targetMode === 'single' && !compose.userEmail.trim()) {
+      pushToast({ type: 'error', message: 'Target user email is required.' })
+      return
+    }
 
-  useEffect(() => {
-    // Initial load on first render.
-    load()
-  }, [])
-
-  async function handleMarkRead(notificationId) {
-    // Method purpose: mark one notification as read.
+    setSending(true)
     try {
-      // Mark read first, then refresh and notify global listeners (badge counters, sidebars, etc.).
-      await markNotificationRead(notificationId)
-      pushToast({ type: 'success', message: 'Marked as read.' })
-      // Reload list so row status immediately changes to READ.
-      await load()
-      // Broadcast to navbar/other pages that unread count changed.
+      if (compose.targetMode === 'single') {
+        await adminCreateNotification({
+          userEmail: compose.userEmail.trim(),
+          message,
+          type: compose.type,
+        })
+      } else if (compose.targetMode === 'role') {
+        await adminBroadcastNotificationToRole(compose.targetRole, {
+          message,
+          type: compose.type,
+        })
+      } else {
+        await adminBroadcastNotification({
+          message,
+          type: compose.type,
+        })
+      }
+      pushToast({ type: 'success', message: 'Notification sent successfully.' })
+      setCompose((prev) => ({
+        ...prev,
+        userEmail: '',
+        message: '',
+        type: 'SYSTEM',
+      }))
       window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
-      pushToast({ type: 'error', message: err.message || 'Could not mark as read.' })
+      pushToast({ type: 'error', message: err.message || 'Could not send notification.' })
+    } finally {
+      setSending(false)
     }
   }
 
   return (
     <div className="dash-card">
       <h2>Notifications</h2>
+      <form onSubmit={handleSend} className="admin-notification-form">
+        <div className="admin-notification-row">
+          <div className="admin-notification-field">
+            <label htmlFor="targetMode">Recipient type</label>
+            <select
+              id="targetMode"
+              value={compose.targetMode}
+              onChange={(e) => setCompose((prev) => ({ ...prev, targetMode: e.target.value }))}
+            >
+              <option value="single">Single user</option>
+              <option value="role">Role group</option>
+              <option value="all">All users</option>
+            </select>
+          </div>
 
-      {error ? <div className="dash-msg error">{error}</div> : null}
+          {compose.targetMode === 'single' ? (
+            <div className="admin-notification-field">
+              <label htmlFor="targetEmail">Target user email</label>
+              <input
+                id="targetEmail"
+                type="email"
+                placeholder="student@my.sliit.lk"
+                value={compose.userEmail}
+                onChange={(e) => setCompose((prev) => ({ ...prev, userEmail: e.target.value }))}
+              />
+            </div>
+          ) : null}
 
-      {loading ? <p style={{ color: '#616161' }}>Loading...</p> : null}
+          {compose.targetMode === 'role' ? (
+            <div className="admin-notification-field">
+              <label htmlFor="targetRole">Role</label>
+              <select
+                id="targetRole"
+                value={compose.targetRole}
+                onChange={(e) => setCompose((prev) => ({ ...prev, targetRole: e.target.value }))}
+              >
+                <option value="STUDENT">STUDENT</option>
+                <option value="TECHNICIAN">TECHNICIAN</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SUPERADMIN">SUPERADMIN</option>
+              </select>
+            </div>
+          ) : null}
 
-      {!loading && notifications.length === 0 && !error ? (
-        <p style={{ color: '#616161' }}>No notifications yet.</p>
-      ) : null}
-
-      {!loading && notifications.length > 0 ? (
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Message</th>
-                <th>Type</th>
-                <th>When</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {notifications.map((n) => {
-                const isRead = Boolean(n.readAt)
-                return (
-                  <tr key={n.id}>
-                    <td style={{ maxWidth: 380 }}>{n.message}</td>
-                    <td>{n.type}</td>
-                    <td>{n.createdAt ? new Date(n.createdAt).toLocaleString() : '-'}</td>
-                    <td>
-                      <span
-                        className="dash-badge"
-                        style={{
-                          background: isRead ? '#f5f5f5' : '#e8eaf6',
-                          color: isRead ? '#616161' : '#1a237e',
-                        }}
-                      >
-                        {isRead ? 'READ' : 'UNREAD'}
-                      </span>
-                    </td>
-                    <td>
-                      {isRead ? (
-                        <button type="button" disabled style={{ opacity: 0.6 }}>
-                          Read
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => handleMarkRead(n.id)}>
-                          Mark read
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="admin-notification-field">
+            <label htmlFor="notificationType">Type</label>
+            <select
+              id="notificationType"
+              value={compose.type}
+              onChange={(e) => setCompose((prev) => ({ ...prev, type: e.target.value }))}
+            >
+              <option value="SYSTEM">SYSTEM</option>
+              <option value="BOOKING">BOOKING</option>
+              <option value="TICKET">TICKET</option>
+              <option value="RESOURCE">RESOURCE</option>
+              <option value="REMINDER">REMINDER</option>
+            </select>
+          </div>
         </div>
-      ) : null}
+
+        <div className="admin-notification-field">
+          <label htmlFor="notificationMessage">Message</label>
+          <textarea
+            id="notificationMessage"
+            rows={3}
+            maxLength={1000}
+            placeholder="Enter the notification text..."
+            value={compose.message}
+            onChange={(e) => setCompose((prev) => ({ ...prev, message: e.target.value }))}
+          />
+        </div>
+
+        <div className="admin-notification-actions">
+          <span className="admin-notification-char-count">{compose.message.length}/1000</span>
+          <button type="submit" className="dash-btn" disabled={sending}>
+            {sending ? 'Sending...' : 'Send notification'}
+          </button>
+        </div>
+      </form>
+
+      <NotificationInbox title="Notifications Inbox" />
     </div>
   )
 }

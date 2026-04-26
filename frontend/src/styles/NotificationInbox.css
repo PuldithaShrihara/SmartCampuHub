@@ -1,0 +1,124 @@
+.notification-inbox {
+  display: grid;
+  gap: 14px;
+}
+
+.notification-inbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-inbox-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notification-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.notification-stat-card {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.notification-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.notification-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.notification-filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.notification-filters input,
+.notification-filters select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.notification-message-cell {
+  max-width: 520px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.notification-type-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.notification-type-pill.type-booking {
+  background: #ecfeff;
+  color: #155e75;
+  border-color: #a5f3fc;
+}
+
+.notification-type-pill.type-ticket {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+.notification-type-pill.type-resource {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.notification-type-pill.type-reminder {
+  background: #f5f3ff;
+  color: #5b21b6;
+  border-color: #ddd6fe;
+}
+
+.notification-type-pill.type-system {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+@media (max-width: 1000px) {
+  .notification-stats-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .notification-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .notification-inbox-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-filters {
+    grid-template-columns: 1fr;
+  }
+}
