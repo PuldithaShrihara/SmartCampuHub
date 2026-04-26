@@ -84,7 +84,8 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 
 		Incident savedIncident = incidentRepository.save(incident);
-		// Do not create submit-success notification for reporter to avoid duplicate popup messages.
+		// Create student-facing confirmation notification for inbox.
+		notifyIncidentSubmitted(currentUser.getEmail(), savedIncident.getTitle());
 		// Also notify admins and technicians about new ticket.
 		notifyAdminAndTechnicianOnIncidentCreated(savedIncident, currentUser);
 		return toIncidentData(savedIncident, false, true, false);
@@ -99,8 +100,8 @@ public class IncidentServiceImpl implements IncidentService {
 			shortTitle = shortTitle.substring(0, 117) + "...";
 		}
 		String message = shortTitle.isEmpty()
-				? "Your incident report was submitted successfully. You can track it under Incidents."
-				: "Incident submitted successfully: \"" + shortTitle + "\". You can track it under Incidents.";
+				? "Your incident was submitted successfully."
+				: "Incident submitted successfully: \"" + shortTitle + "\".";
 		try {
 			notificationService.createForUser(new CreateNotificationRequest(
 					message,
