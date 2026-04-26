@@ -19,7 +19,7 @@ export default function ScanQrPage() {
   const [loadingResult, setLoadingResult] = useState(false)
   const [booking, setBooking] = useState(null)
   const [manualToken, setManualToken] = useState('')
-  const [scanStatus, setScanStatus] = useState('idle') // idle | scanning | success | invalid | error
+  const [scanStatus, setScanStatus] = useState('idle') // idle | scanning | success | already_scanned | invalid | error
   const lastScanRef = useRef({ token: '', at: 0 })
 
   useEffect(() => {
@@ -166,14 +166,18 @@ export default function ScanQrPage() {
       }
       lastScanRef.current = { token, at: now }
 
-      const ok = await fetchBooking(token)
-      if (ok) {
-        setScanStatus('success')
+      const result = await fetchBooking(token)
+      if (result.ok) {
+        setScanStatus(result.reason === 'already_scanned' ? 'already_scanned' : 'success')
         stopScanner()
         processingRef.current = false
         return
       }
-      setScanStatus('invalid')
+      if (result.reason === 'already_scanned') {
+        setScanStatus('already_scanned')
+      } else {
+        setScanStatus('invalid')
+      }
 
       if (scanningRef.current) {
         processingRef.current = false
@@ -190,26 +194,35 @@ export default function ScanQrPage() {
     try {
       setLoadingResult(true)
       setScanError('')
-      const data = await getBookingByQrToken(token)
-      setBooking(data || null)
+      const response = await getBookingByQrToken(token)
+      const data = response?.data || null
+      const message = String(response?.message || '').toLowerCase()
+      setBooking(data)
       if (!data) {
         setScanError('QR verified but booking details are empty.')
-        return false
+        return { ok: false, reason: 'empty' }
       }
-      return true
+      if (message.includes('already scanned')) {
+        setScanError('')
+        return { ok: true, reason: 'already_scanned' }
+      }
+      return { ok: true, reason: '' }
     } catch (err) {
       setBooking(null)
       const msg = String(err?.message || 'Failed to fetch booking by QR token.')
       if (msg.toLowerCase().includes('not found')) {
         setScanError('QR scanned, but booking was not found in the current environment/database.')
+        return { ok: false, reason: 'not_found' }
       } else if (msg.toLowerCase().includes('already scanned')) {
         setScanError('This QR has already been scanned.')
+        return { ok: false, reason: 'already_scanned' }
       } else if (msg.toLowerCase().includes('no longer valid') || msg.toLowerCase().includes('gone')) {
         setScanError('This QR is no longer valid for verification.')
+        return { ok: false, reason: 'expired' }
       } else {
         setScanError(msg)
+        return { ok: false, reason: 'error' }
       }
-      return false
     } finally {
       setLoadingResult(false)
     }
@@ -223,11 +236,19 @@ export default function ScanQrPage() {
       setScanStatus('invalid')
       return
     }
-    const ok = await fetchBooking(token)
-    if (ok && isScanning) {
+    const result = await fetchBooking(token)
+    if (result.ok && isScanning) {
       stopScanner()
     }
-    setScanStatus(ok ? 'success' : 'error')
+    if (result.ok && result.reason === 'already_scanned') {
+      setScanStatus('already_scanned')
+    } else if (result.ok) {
+      setScanStatus('success')
+    } else if (result.reason === 'already_scanned') {
+      setScanStatus('already_scanned')
+    } else {
+      setScanStatus('error')
+    }
   }
 
   async function handleScreenshotFile(e) {
@@ -285,11 +306,19 @@ export default function ScanQrPage() {
         return
       }
 
-      const ok = await fetchBooking(token)
-      if (ok && isScanning) {
+      const result = await fetchBooking(token)
+      if (result.ok && isScanning) {
         stopScanner()
       }
-      setScanStatus(ok ? 'success' : 'error')
+      if (result.ok && result.reason === 'already_scanned') {
+        setScanStatus('already_scanned')
+      } else if (result.ok) {
+        setScanStatus('success')
+      } else if (result.reason === 'already_scanned') {
+        setScanStatus('already_scanned')
+      } else {
+        setScanStatus('error')
+      }
     } catch (err) {
       setScanError(err?.message || 'Failed to scan QR from screenshot.')
       setScanStatus('error')
@@ -331,6 +360,7 @@ export default function ScanQrPage() {
         {scanStatus === 'idle' && 'Scanner idle'}
         {scanStatus === 'scanning' && 'Scanner active - point camera to QR code'}
         {scanStatus === 'success' && 'QR verified successfully'}
+        {scanStatus === 'already_scanned' && 'QR already scanned'}
         {scanStatus === 'invalid' && 'Invalid/unmatched QR - scanner kept active'}
         {scanStatus === 'error' && 'Scanner error - check message below'}
       </div>

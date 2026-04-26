@@ -3,6 +3,7 @@ package com.example.backend.booking.service;
 import java.util.List;
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
+import com.example.backend.booking.dto.QrLookupResponse;
 import com.example.backend.booking.entity.BookingStatus;
 
 public interface BookingService {
@@ -17,7 +18,7 @@ public interface BookingService {
 
     void deleteBooking(String bookingId);
 
-    BookingResponse getBookingByQrToken(String qrToken);
+    QrLookupResponse getBookingByQrToken(String qrToken);
 
     List<String> findMalformedBookingIds();
 
