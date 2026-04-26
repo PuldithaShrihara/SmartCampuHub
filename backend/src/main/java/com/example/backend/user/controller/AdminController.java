@@ -60,7 +60,7 @@ public class AdminController {
 
 	@GetMapping("/users/technicians")
 	public List<UserSummaryDto> listTechnicians() {
-		return userService.listTechnicians();
+		return userService.listAvailableTechnicians();
 	}
 
 	@GetMapping("/users")

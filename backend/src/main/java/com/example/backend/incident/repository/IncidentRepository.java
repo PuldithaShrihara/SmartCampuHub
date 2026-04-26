@@ -13,4 +13,8 @@ public interface IncidentRepository extends MongoRepository<Incident, String> {
 	List<Incident> findAllByOrderByCreatedAtDesc();
 
 	List<Incident> findByStatusOrderByCreatedAtDesc(IncidentStatus status);
+
+	boolean existsByAssignedToAndStatusNot(String assignedTo, IncidentStatus status);
+
+	boolean existsByAssignedToAndStatusNotAndIdNot(String assignedTo, IncidentStatus status, String id);
 }
