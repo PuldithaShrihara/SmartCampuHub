@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.example.backend.auth.dto.CreateStaffUserRequest;
 import com.example.backend.auth.dto.UserSummaryDto;
 import com.example.backend.auth.service.UserManagementService;
+import com.example.backend.incident.entity.IncidentStatus;
+import com.example.backend.incident.repository.IncidentRepository;
 import com.example.backend.user.dto.CreateTechnicianRequest;
 import com.example.backend.user.entity.Role;
 import com.example.backend.user.entity.User;
@@ -19,11 +21,16 @@ public class UserService {
 
 	private final UserManagementService userManagementService;
 	private final UserRepository userRepository;
+	private final IncidentRepository incidentRepository;
 	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-	public UserService(UserManagementService userManagementService, UserRepository userRepository) {
+	public UserService(
+			UserManagementService userManagementService,
+			UserRepository userRepository,
+			IncidentRepository incidentRepository) {
 		this.userManagementService = userManagementService;
 		this.userRepository = userRepository;
+		this.incidentRepository = incidentRepository;
 	}
 
 	public UserSummaryDto createTechnicianByAdmin(CreateStaffUserRequest request) {
@@ -32,6 +39,13 @@ public class UserService {
 
 	public List<UserSummaryDto> listTechnicians() {
 		return userManagementService.listTechnicians();
+	}
+
+	public List<UserSummaryDto> listAvailableTechnicians() {
+		return userManagementService.listTechnicians()
+				.stream()
+				.filter(tech -> !incidentRepository.existsByAssignedToAndStatusNot(tech.id(), IncidentStatus.RESOLVED))
+				.toList();
 	}
 
 	public User createTechnician(CreateTechnicianRequest request) {

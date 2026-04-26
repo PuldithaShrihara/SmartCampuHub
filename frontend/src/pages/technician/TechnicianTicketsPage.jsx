@@ -8,7 +8,12 @@ import {
 import { useAuth } from '../../context/useAuth.js'
 import '../../styles/TechnicianTicketsPage.css'
 
-const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
+function statusClassForBadge(status) {
+  const n = String(status || '').toLowerCase()
+  if (n === 'resolved') return 'tech-status-badge resolved'
+  if (n === 'in progress') return 'tech-status-badge progress'
+  return 'tech-status-badge pending'
+}
 
 export default function TechnicianTicketsPage() {
   // Logged-in technician data from auth context.
@@ -19,7 +24,7 @@ export default function TechnicianTicketsPage() {
   const [error, setError] = useState('')
   // Per-incident typed remarks before saving.
   const [remarksById, setRemarksById] = useState({})
-  // Track row currently processing accept/decline action.
+  // Track row currently processing accept/decline/resolve action.
   const [actionLoadingId, setActionLoadingId] = useState('')
   // Optional filter toggle to show only current technician assignments.
   const [onlyMyTickets, setOnlyMyTickets] = useState(false)
@@ -62,36 +67,26 @@ export default function TechnicianTicketsPage() {
     return item.assignedTo ? 'Assigned' : 'Unassigned'
   }
 
-  function assignedToLabel(item) {
-    // Show friendly "Unassigned" when no assignee exists.
-    if (!item.assignedTo) return 'Unassigned'
-    if (typeof item.assignedTo === 'object') {
-      // Prefer full name, then email.
-      return item.assignedTo.fullName || item.assignedTo.email || 'Assigned'
-    }
-    // Fallback label for string id format.
-    return 'Assigned'
-  }
-
   const visibleIncidents = onlyMyTickets
     // Optional operator-focused view: keep only incidents assigned to the logged-in technician.
     ? incidents.filter((item) => item.assignedTo?.email === user?.email)
     : incidents
 
-  async function handleStatusChange(incidentId, status) {
-    // Method purpose: technician updates workflow status (Pending/In Progress/Resolved).
+  async function handleMarkResolved(incidentId) {
     try {
-      const res = await updateIncident(incidentId, { status })
-      // Respect API success contract; avoid false positives on partial/error responses.
+      setActionLoadingId(incidentId)
+      setError('')
+      const res = await updateIncident(incidentId, { status: 'Resolved' })
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not update status')
       }
-      // Match requested native popup success style.
-      window.alert('Incident status updated.')
-      // Refresh data so table and counters stay accurate.
+      window.alert('Incident marked as resolved.')
       await loadIncidents()
+      window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
       setError(err.message || 'Could not update status')
+    } finally {
+      setActionLoadingId('')
     }
   }
 
@@ -153,6 +148,49 @@ export default function TechnicianTicketsPage() {
       setActionLoadingId('')
     }
   }
+
+  function statusCellForRow(item) {
+    const mine = item.assignedTo?.email === user?.email
+    const assignSt = effectiveAssignmentStatus(item)
+    const st = String(item.status || '').toLowerCase()
+    const label = item.status || '—'
+
+    if (!mine) {
+      return <span className={statusClassForBadge(item.status)}>{label}</span>
+    }
+    if (assignSt === 'Assigned') {
+      return (
+        <div className="tech-status-cell">
+          <span className="tech-status-badge pending">Pending</span>
+          <span className="tech-status-hint">Accept assignment to start</span>
+        </div>
+      )
+    }
+    if (st === 'resolved') {
+      return <span className="tech-status-badge resolved">Resolved</span>
+    }
+    if (st === 'in progress') {
+      return (
+        <div className="tech-status-cell tech-status-cell--active">
+          <span className="tech-status-badge progress">{item.status || 'In Progress'}</span>
+          <button
+            type="button"
+            className="tech-resolve-btn"
+            onClick={() => handleMarkResolved(item.id)}
+            disabled={actionLoadingId === item.id}
+          >
+            Mark resolved
+          </button>
+        </div>
+      )
+    }
+    return <span className="tech-status-badge pending">{item.status || 'Pending'}</span>
+  }
+
+  const awaitingAccept = (item) =>
+    item.assignedTo?.email === user?.email && effectiveAssignmentStatus(item) === 'Assigned'
+  const remarksLocked = (item) =>
+    awaitingAccept(item) || String(item.status || '').toLowerCase() === 'resolved'
 
   async function handleDecline(incidentId) {
     // Method purpose: technician declines assigned work.
@@ -216,7 +254,6 @@ export default function TechnicianTicketsPage() {
               <th>User</th>
               <th>Resource</th>
               <th>Attachment</th>
-              <th>Assigned To</th>
               <th>Assignment</th>
               <th>Status</th>
               <th>Remarks</th>
@@ -225,7 +262,7 @@ export default function TechnicianTicketsPage() {
           <tbody>
             {visibleIncidents.length === 0 ? (
               <tr>
-                <td colSpan={8} className="tech-tickets-empty-state">No incidents found.</td>
+                <td colSpan={7} className="tech-tickets-empty-state">No incidents found.</td>
               </tr>
             ) : (
               visibleIncidents.map((item) => (
@@ -242,7 +279,6 @@ export default function TechnicianTicketsPage() {
                       <span className="tech-muted">-</span>
                     )}
                   </td>
-                  <td>{assignedToLabel(item)}</td>
                   <td>
                     {/* Accept/Decline is visible only to the assigned technician while assignment is pending. */}
                     {item.assignedTo?.email === user?.email && effectiveAssignmentStatus(item) === 'Assigned' ? (
@@ -268,23 +304,7 @@ export default function TechnicianTicketsPage() {
                       effectiveAssignmentStatus(item)
                     )}
                   </td>
-                  <td>
-                    <select
-                      className="tech-status-select"
-                      value={item.status}
-                      disabled={
-                        item.assignedTo?.email === user?.email &&
-                        effectiveAssignmentStatus(item) === 'Assigned'
-                      }
-                      onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                  <td className="tech-status-td">{statusCellForRow(item)}</td>
                   <td>
                     <input
                       className="tech-remarks-input"
@@ -293,11 +313,13 @@ export default function TechnicianTicketsPage() {
                         setRemarksById((prev) => ({ ...prev, [item.id]: e.target.value }))
                       }
                       placeholder="Add remarks"
+                      disabled={remarksLocked(item)}
                     />
                     <button
                       type="button"
                       className="tech-save-btn"
                       onClick={() => saveRemarks(item.id)}
+                      disabled={remarksLocked(item)}
                     >
                       Save
                     </button>

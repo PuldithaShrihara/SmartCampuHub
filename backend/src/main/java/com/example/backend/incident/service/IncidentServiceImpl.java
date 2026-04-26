@@ -86,8 +86,8 @@ public class IncidentServiceImpl implements IncidentService {
 		Incident savedIncident = incidentRepository.save(incident);
 		// Create student-facing confirmation notification for inbox.
 		notifyIncidentSubmitted(currentUser.getEmail(), savedIncident.getTitle());
-		// Also notify admins and technicians about new ticket.
-		notifyAdminAndTechnicianOnIncidentCreated(savedIncident, currentUser);
+		// Notify admins about new ticket; technicians are notified only when specifically assigned.
+		notifyAdminsOnIncidentCreated(savedIncident, currentUser);
 		return toIncidentData(savedIncident, false, true, false);
 	}
 
@@ -203,6 +203,11 @@ public class IncidentServiceImpl implements IncidentService {
 		Incident incident = incidentRepository.findById(incidentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
 		String previousAssignee = incident.getAssignedTo();
+		// Resolved tickets are locked for assignment changes.
+		if (request.getAssignedTo() != null && incident.getStatus() == IncidentStatus.RESOLVED) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Resolved incidents are locked and cannot be assigned or reassigned.");
+		}
 
 		if (currentUser.getRole() == Role.ADMIN) {
 			if (request.getAssignedTo() != null) {
@@ -268,6 +273,8 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 
 		incident.setAssignmentStatus(IncidentAssignmentStatus.ACCEPTED);
+		// Work officially starts when the technician accepts — move ticket out of Pending.
+		incident.setStatus(IncidentStatus.IN_PROGRESS);
 		Incident saved = incidentRepository.save(incident);
 		notifyAssignmentDecision(saved, currentUser, true);
 		return toIncidentData(saved, true, true, true);
@@ -309,6 +316,12 @@ public class IncidentServiceImpl implements IncidentService {
 		// Incidents can be assigned only to Technician role.
 		if (assignee.getRole() != Role.TECHNICIAN) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incidents can only be assigned to technicians");
+		}
+		// Prevent multiple active assignments for the same technician.
+		// A technician is considered busy while they have any non-resolved assigned incident.
+		if (incidentRepository.existsByAssignedToAndStatusNotAndIdNot(assignedTo, IncidentStatus.RESOLVED, incident.getId())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Selected technician already has an active task. Please choose an available technician.");
 		}
 		incident.setAssignedTo(assignedTo);
 		incident.setAssignedBy(assignedByUserId);
@@ -365,7 +378,7 @@ public class IncidentServiceImpl implements IncidentService {
 		}
 	}
 
-	private void notifyAdminAndTechnicianOnIncidentCreated(Incident incident, User reporter) {
+	private void notifyAdminsOnIncidentCreated(Incident incident, User reporter) {
 		String title = safeText(incident.getTitle());
 		String reporterName = safeText(reporter.getFullName()).isEmpty() ? reporter.getEmail() : reporter.getFullName();
 		String message = title.isEmpty()
@@ -387,20 +400,6 @@ public class IncidentServiceImpl implements IncidentService {
 			}
 		}
 
-		// Send this notification to all technicians.
-		for (User technician : userRepository.findByRole(Role.TECHNICIAN)) {
-			if (isBlank(technician.getEmail())) {
-				continue;
-			}
-			try {
-				notificationService.createForUser(new CreateNotificationRequest(
-						message,
-						technician.getEmail().trim(),
-						NotificationType.TICKET));
-			} catch (Exception ex) {
-				log.warn("Could not notify technician {} for incident creation: {}", technician.getId(), ex.getMessage());
-			}
-		}
 	}
 
 	private void notifyOnTechnicianProgress(Incident incident, User technician) {

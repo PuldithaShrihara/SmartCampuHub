@@ -16,6 +16,28 @@ function statusClass(status) {
   return 'ticket-status pending'
 }
 
+function effectiveAssignmentStatus(item) {
+  if (item.assignmentStatus && item.assignmentStatus !== 'Unassigned') {
+    return item.assignmentStatus
+  }
+  return item.assignedTo ? 'Assigned' : 'Unassigned'
+}
+
+function statusFlowHint(item) {
+  const st = String(item.status || '').toLowerCase()
+  const assign = effectiveAssignmentStatus(item)
+  if (st === 'pending' && assign === 'Assigned') {
+    return 'Waiting for technician to accept'
+  }
+  if (st === 'in progress') {
+    return 'Technician has accepted; work in progress'
+  }
+  if (st === 'resolved') {
+    return 'Closed'
+  }
+  return null
+}
+
 function getStatusCounts(incidents) {
   // Build summary counters for dashboard mini pills.
   return incidents.reduce(
@@ -47,6 +69,10 @@ export default function Tickets() {
   const [loading, setLoading] = useState(false)
   // Track incident currently being assigned to disable only that row control.
   const [assigningId, setAssigningId] = useState('')
+  // Technician-list loading state for assignment UX.
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false)
+  // Error text for technician availability list loading.
+  const [technicianError, setTechnicianError] = useState('')
   // Derived totals used in hero summary cards.
   const statusCounts = getStatusCounts(incidents)
 
@@ -69,32 +95,32 @@ export default function Tickets() {
     }
   }
 
-  useEffect(() => {
-    // Reload incident list whenever admin changes status filter.
-    loadIncidents()
-  }, [statusFilter])
+  async function loadTechnicians() {
+    try {
+      setLoadingTechnicians(true)
+      setTechnicianError('')
+      const list = await adminListTechnicians()
+      setTechnicians(Array.isArray(list) ? list : [])
+    } catch (err) {
+      setTechnicians([])
+      setTechnicianError(err?.message || 'Could not load available technicians')
+    } finally {
+      setLoadingTechnicians(false)
+    }
+  }
 
   useEffect(() => {
-    // Local cancellation flag avoids state updates after component unmount.
-    let cancelled = false
-    ;(async () => {
-      try {
-        // Fetch available technicians for assignment.
-        const list = await adminListTechnicians()
-        if (!cancelled) {
-          // Keep array-safe fallback.
-          setTechnicians(Array.isArray(list) ? list : [])
-        }
-      } catch {
-        // Fail-safe: empty list keeps dropdown stable.
-        if (!cancelled) setTechnicians([])
-      }
-    })()
+    // Keep both tickets and available technicians in sync in near-real-time.
+    loadIncidents()
+    loadTechnicians()
+    const intervalId = window.setInterval(() => {
+      loadIncidents()
+      loadTechnicians()
+    }, 8000)
     return () => {
-      // Cleanup triggers when component unmounts.
-      cancelled = true
+      window.clearInterval(intervalId)
     }
-  }, [])
+  }, [statusFilter])
 
   async function handleAssignTechnician(incidentId, technicianUserId) {
     // Method purpose: admin assigns or unassigns technician for one incident.
@@ -106,8 +132,8 @@ export default function Tickets() {
       await updateIncident(incidentId, { assignedTo: technicianUserId })
       // Match requested native popup success style.
       window.alert(technicianUserId ? 'Technician assigned successfully.' : 'Technician unassigned successfully.')
-      // Refresh table so admin sees latest assignment state.
-      await loadIncidents()
+      // Refresh both table and availability list immediately.
+      await Promise.all([loadIncidents(), loadTechnicians()])
     } catch (err) {
       setError(err.message || 'Could not assign technician')
     } finally {
@@ -156,9 +182,14 @@ export default function Tickets() {
           </select>
         </div>
         <span className="tickets-meta">
-          {loading ? 'Loading incidents...' : `${incidents.length} ticket(s) found`}
+          {loading
+            ? 'Loading incidents...'
+            : loadingTechnicians
+              ? `Refreshing availability... ${incidents.length} ticket(s) found`
+              : `${incidents.length} ticket(s) found`}
         </span>
       </div>
+      {technicianError ? <div className="dash-msg error">{technicianError}</div> : null}
 
       <div className="dash-table-wrap">
         <table className="dash-table tickets-table">
@@ -189,6 +220,13 @@ export default function Tickets() {
                     : typeof item.assignedTo === 'string'
                       ? item.assignedTo
                       : ''
+                const assignedName =
+                  typeof item.assignedTo === 'object'
+                    ? item.assignedTo?.fullName || item.assignedTo?.email || 'Current technician'
+                    : 'Current technician'
+                const isAssignedTechnicianAvailable = technicians.some((t) => t.id === assignedId)
+                const isResolved = String(item.status || '').toLowerCase() === 'resolved'
+                const statusHint = statusFlowHint(item)
                 return (
                   <tr key={item.id}>
                     <td className="tickets-title-cell">{item.title}</td>
@@ -205,18 +243,26 @@ export default function Tickets() {
                     </td>
                     <td>
                       <div className="tickets-status-cell">
-                        <span className={statusClass(item.status)}>{item.status}</span>
+                        <div className="tickets-status-stack">
+                          <span className={statusClass(item.status)}>{item.status}</span>
+                          {statusHint ? (
+                            <span className="tickets-status-hint">{statusHint}</span>
+                          ) : null}
+                        </div>
                       </div>
                     </td>
                     <td>
                       <select
                         className="tickets-assign-select"
                         value={assignedId}
-                        disabled={assigningId === item.id}
+                        disabled={assigningId === item.id || isResolved}
                         onChange={(e) => handleAssignTechnician(item.id, e.target.value)}
                         aria-label={`Assign technician for ${item.title}`}
                       >
                         <option value="">Unassigned</option>
+                        {assignedId && !isAssignedTechnicianAvailable ? (
+                          <option value={assignedId}>{assignedName} (busy)</option>
+                        ) : null}
                         {technicians.map((t) => (
                           <option key={t.id} value={t.id}>
                             {t.fullName || t.email}
