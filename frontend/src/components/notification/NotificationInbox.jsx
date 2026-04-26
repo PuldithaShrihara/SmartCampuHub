@@ -4,13 +4,19 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../api/notifications.js'
-import { useToast } from '../toastContext.js'
 import '../../styles/NotificationInbox.css'
 
 const TYPES = ['ALL', 'BOOKING', 'TICKET', 'RESOURCE', 'REMINDER', 'SYSTEM']
 
+function isLegacyIncidentSubmitMessage(message) {
+  const text = String(message || '').toLowerCase()
+  return (
+    text.includes('you can track it under incidents.') &&
+    (text.includes('incident submitted successfully') || text.includes('incident report was submitted successfully'))
+  )
+}
+
 export default function NotificationInbox({ title = 'Notifications', autoRefreshMs = 30000 }) {
-  const { pushToast } = useToast()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -26,7 +32,9 @@ export default function NotificationInbox({ title = 'Notifications', autoRefresh
     setError('')
     try {
       const res = await listNotifications()
-      setNotifications(Array.isArray(res) ? res : [])
+      const list = Array.isArray(res) ? res : []
+      // Hide old auto-generated submit-confirmation notifications to avoid repeated popup-like noise.
+      setNotifications(list.filter((item) => !isLegacyIncidentSubmitMessage(item?.message)))
     } catch (err) {
       setError(err?.message || 'Failed to load notifications')
     } finally {
@@ -48,11 +56,11 @@ export default function NotificationInbox({ title = 'Notifications', autoRefresh
     try {
       setMarkingOneId(notificationId)
       await markNotificationRead(notificationId)
-      pushToast({ type: 'success', message: 'Marked as read.' })
+      window.alert('Marked as read.')
       await load()
       window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Could not mark as read.' })
+      window.alert(err?.message || 'Could not mark as read.')
     } finally {
       setMarkingOneId('')
     }
@@ -63,14 +71,11 @@ export default function NotificationInbox({ title = 'Notifications', autoRefresh
       setMarkingAll(true)
       const result = await markAllNotificationsRead()
       const updatedCount = result?.updatedCount || 0
-      pushToast({
-        type: 'success',
-        message: updatedCount > 0 ? `Marked ${updatedCount} notification(s) as read.` : 'No unread notifications.',
-      })
+      window.alert(updatedCount > 0 ? `Marked ${updatedCount} notification(s) as read.` : 'No unread notifications.')
       await load()
       window.dispatchEvent(new Event('notifications:changed'))
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Could not mark all as read.' })
+      window.alert(err?.message || 'Could not mark all as read.')
     } finally {
       setMarkingAll(false)
     }

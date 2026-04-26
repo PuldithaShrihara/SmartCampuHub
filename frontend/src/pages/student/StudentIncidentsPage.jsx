@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
-import { useToast } from '../../components/toastContext.js'
 import { useAuth } from '../../context/useAuth.js'
 import '../../styles/StudentIncidentsPage.css'
 
@@ -36,7 +35,6 @@ function getStatusCounts(incidents) {
 
 export default function StudentIncidentsPage() {
   const { user } = useAuth()
-  const { pushToast } = useToast()
   const allowedFileTypes = ['image/jpeg', 'image/png', 'application/pdf']
   const maxFileSizeBytes = 2 * 1024 * 1024
   // Reference to "My Incidents" section for smooth scroll after successful submit.
@@ -190,8 +188,7 @@ export default function StudentIncidentsPage() {
         // Remove any selected file while leaving edit mode.
         clearSelectedFile()
         setEditingIncidentId(null)
-        // Show success feedback using app toast popup (instead of browser alert).
-        pushToast({ type: 'success', message: 'Incident updated successfully.' })
+        window.alert('Incident updated successfully.')
       } else {
         // Create new incident with optional attachment.
         const response = await createIncident({
@@ -204,17 +201,15 @@ export default function StudentIncidentsPage() {
         if (response?.success !== true) {
           throw new Error(response?.message || 'Could not submit incident')
         }
-        // Keep submit feedback only in page message area (no duplicate toast).
-        // Tell notification widgets/badges to refresh.
-        window.dispatchEvent(new Event('notifications:changed'))
+        // Do not trigger global notification popup flow after submit.
+        // (User wants only one submit success message.)
         setTitle('')
         setDescription('')
         setResourceId('')
         // Clear selected file from state and native input.
         clearSelectedFile()
         setEditingIncidentId(null)
-        // Show success feedback using app toast popup (instead of browser alert).
-        pushToast({ type: 'success', message: 'Incident submitted successfully.' })
+        window.alert('Incident submitted successfully.')
       }
       // Reload incident table after create/update.
       await loadMyIncidents()
@@ -256,8 +251,7 @@ export default function StudentIncidentsPage() {
     if (!file) return
     // Remove selected file and show confirmation.
     clearSelectedFile()
-    // Show success feedback using app toast popup.
-    pushToast({ type: 'success', message: 'Attachment removed successfully.' })
+    window.alert('Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
@@ -276,8 +270,7 @@ export default function StudentIncidentsPage() {
         // If deleted row was being edited, reset edit form.
         cancelEdit()
       }
-      // Show success feedback using app toast popup.
-      pushToast({ type: 'success', message: 'Incident deleted successfully.' })
+      // Keep delete flow like native confirm dialog style: no extra success toast popup.
       await loadMyIncidents()
     } catch (err) {
       setError(err.message || 'Could not delete incident')
