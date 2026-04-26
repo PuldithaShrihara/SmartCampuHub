@@ -104,6 +104,7 @@ export default function AllBookingsPage() {
   const totalBookings = bookings.length
   const pendingCount = bookings.filter((b) => normalizeStatus(b.status) === 'PENDING').length
   const approvedCount = bookings.filter((b) => normalizeStatus(b.status) === 'APPROVED').length
+  const checkedInCount = bookings.filter((b) => normalizeStatus(b.status) === 'CHECKED_IN').length
   const rejectedCount = bookings.filter((b) => normalizeStatus(b.status) === 'REJECTED').length
   const cancelledCount = bookings.filter((b) => normalizeStatus(b.status) === 'CANCELLED').length
 
@@ -131,6 +132,7 @@ export default function AllBookingsPage() {
         >
           <option value="PENDING">PENDING</option>
           <option value="APPROVED">APPROVED</option>
+          <option value="CHECKED_IN">CHECKED_IN</option>
           <option value="REJECTED">REJECTED</option>
           <option value="CANCELLED">CANCELLED</option>
         </select>
@@ -252,6 +254,7 @@ export default function AllBookingsPage() {
             <option value="ALL">All Statuses</option>
             <option value="PENDING">PENDING</option>
             <option value="APPROVED">APPROVED</option>
+            <option value="CHECKED_IN">CHECKED_IN</option>
             <option value="REJECTED">REJECTED</option>
             <option value="CANCELLED">CANCELLED</option>
           </select>
@@ -278,6 +281,7 @@ export default function AllBookingsPage() {
             <StatCard title="Total Bookings" value={totalBookings} tone="total" />
             <StatCard title="Pending" value={pendingCount} tone="pending" />
             <StatCard title="Approved" value={approvedCount} tone="approved" />
+            <StatCard title="Checked In" value={checkedInCount} tone="approved" />
             <StatCard title="Rejected" value={rejectedCount} tone="rejected" />
             <StatCard title="Cancelled" value={cancelledCount} tone="cancelled" />
           </div>
