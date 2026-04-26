@@ -65,6 +65,7 @@ Swagger (OpenAPI Docs)
 
 🏗️ Architecture Overview
 smart_campus_new/
+
 ├── frontend/        # React app (role-based UI)
 
 │   ├── api/         # API handling
@@ -79,6 +80,7 @@ smart_campus_new/
 
 │   └── App.jsx      # Routing & protection
 │
+
 ├── backend/         # Spring Boot API
 
 │   ├── auth/        # Authentication logic
