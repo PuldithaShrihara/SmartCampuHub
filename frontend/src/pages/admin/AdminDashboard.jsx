@@ -25,14 +25,12 @@ import StatisticsPage from './StatisticsPage.jsx'
 import SettingsPage from './SettingsPage.jsx'
 import VenueAnalysisPage from './VenueAnalysisPage.jsx'
 import ScanQrPage from './ScanQrPage.jsx'
-import { getUnreadNotificationCount, listNotifications } from '../../api/notifications.js'
-import { useToast } from '../../components/toastContext.js'
+import { getUnreadNotificationCount } from '../../api/notifications.js'
 import '../../styles/StudentDashboard.css'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { pushToast } = useToast()
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const previousUnreadRef = useRef(0)
 
@@ -61,21 +59,6 @@ export default function AdminDashboard() {
         const count = res?.count || 0
         if (!cancelled) {
           setUnreadNotifications(count)
-          if (count > previousUnreadRef.current) {
-            try {
-              const notifications = await listNotifications()
-              const latestUnread = Array.isArray(notifications)
-                ? notifications.find((n) => !n?.readAt)
-                : null
-              if (latestUnread?.message) {
-                pushToast({ type: 'success', message: latestUnread.message })
-              } else {
-                pushToast({ type: 'success', message: 'You have new notifications.' })
-              }
-            } catch {
-              pushToast({ type: 'success', message: 'You have new notifications.' })
-            }
-          }
           previousUnreadRef.current = count
         }
       } catch {
@@ -90,7 +73,7 @@ export default function AdminDashboard() {
       window.clearInterval(intervalId)
       window.removeEventListener('notifications:changed', loadUnread)
     }
-  }, [pushToast])
+  }, [])
 
   return (
     <div className="dashboard-container">

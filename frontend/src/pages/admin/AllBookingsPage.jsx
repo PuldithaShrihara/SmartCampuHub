@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { deleteBooking, getAllBookings, updateBookingStatus } from '../../api/bookingApi.js'
-import { useToast } from '../../components/toastContext.js'
 import '../student/MyBookingsPage.css'
 import './AllBookingsPage.css'
 
 export default function AllBookingsPage() {
-  const { pushToast } = useToast()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -44,17 +42,17 @@ export default function AllBookingsPage() {
       await updateBookingStatus(bookingId, nextStatus, rejectionReason)
       await loadBookings()
       if (nextStatus === 'APPROVED') {
-        pushToast({ type: 'success', message: 'Booking approved successfully' })
+        window.alert('Booking approved successfully')
       } else if (nextStatus === 'REJECTED') {
-        pushToast({ type: 'success', message: 'Booking rejected successfully' })
+        window.alert('Booking rejected successfully')
       } else {
-        pushToast({ type: 'success', message: 'Booking status updated successfully' })
+        window.alert('Booking status updated successfully')
       }
       return true
     } catch (err) {
       const message = err.message || 'Failed to update booking status'
       setActionError(message)
-      pushToast({ type: 'error', message: 'Failed to update booking status' })
+      window.alert('Failed to update booking status')
       return false
     } finally {
       setUpdatingId(null)
@@ -73,7 +71,7 @@ export default function AllBookingsPage() {
     } catch (err) {
       const message = err.message || 'Failed to delete booking'
       setActionError(message)
-      pushToast({ type: 'error', message })
+      window.alert(message)
     } finally {
       setUpdatingId(null)
     }
@@ -195,7 +193,7 @@ export default function AllBookingsPage() {
     try {
       window.print()
     } catch (err) {
-      pushToast({ type: 'error', message: err?.message || 'Failed to open print dialog.' })
+      window.alert(err?.message || 'Failed to open print dialog.')
     }
   }
 
