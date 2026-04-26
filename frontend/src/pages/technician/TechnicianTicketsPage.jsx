@@ -6,7 +6,6 @@ import {
   updateIncident,
 } from '../../api/incidentApi.js'
 import { useAuth } from '../../context/useAuth.js'
-import { useToast } from '../../components/toastContext.js'
 import '../../styles/TechnicianTicketsPage.css'
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
@@ -14,8 +13,6 @@ const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
 export default function TechnicianTicketsPage() {
   // Logged-in technician data from auth context.
   const { user } = useAuth()
-  // Global toast helper for success/error feedback.
-  const { pushToast } = useToast()
   // All incidents received from backend.
   const [incidents, setIncidents] = useState([])
   // Error text shown at top of page.
@@ -85,11 +82,12 @@ export default function TechnicianTicketsPage() {
     // Method purpose: technician updates workflow status (Pending/In Progress/Resolved).
     try {
       const res = await updateIncident(incidentId, { status })
-      // Respect API success contract; avoid false positive toasts on partial/error responses.
+      // Respect API success contract; avoid false positives on partial/error responses.
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not update status')
       }
-      pushToast({ type: 'success', message: 'Incident status updated.' })
+      // Match requested native popup success style.
+      window.alert('Incident status updated.')
       // Refresh data so table and counters stay accurate.
       await loadIncidents()
     } catch (err) {
@@ -97,18 +95,39 @@ export default function TechnicianTicketsPage() {
     }
   }
 
+  function validateRemarkInput(rawRemark) {
+    // Remove spaces from start and end.
+    const trimmedRemark = (rawRemark || '').trim()
+    // Must be at least 5 letters/characters.
+    if (trimmedRemark.length < 5) {
+      return { isValid: false, value: '', message: 'Remark must be at least 5 characters' }
+    }
+    // Valid remark -> return cleaned text.
+    return { isValid: true, value: trimmedRemark, message: '' }
+  }
+
   async function saveRemarks(incidentId) {
-    // Method purpose: save technician notes for one incident.
+    // Save remark for one row.
+    // Check input first. If invalid, stop here.
+    const validation = validateRemarkInput(remarksById[incidentId])
+    if (!validation.isValid) {
+      // Show error message.
+      setError(validation.message)
+      return
+    }
     try {
+      // Clear old error before saving.
+      setError('')
       const res = await updateIncident(incidentId, {
-        // Empty text is allowed, so fallback to empty string.
-        technicianRemarks: remarksById[incidentId] || '',
+        // Send cleaned remark text.
+        technicianRemarks: validation.value,
       })
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not save remarks')
       }
-      pushToast({ type: 'success', message: 'Remarks saved successfully.' })
-      // Reload to show saved remarks from server source of truth.
+      // Match requested native popup success style.
+      window.alert('Remark saved successfully')
+      // Load fresh data from backend.
       await loadIncidents()
     } catch (err) {
       setError(err.message || 'Could not save remarks')
@@ -123,7 +142,8 @@ export default function TechnicianTicketsPage() {
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not accept assignment')
       }
-      pushToast({ type: 'success', message: 'Assignment accepted.' })
+      // Match requested native popup success style.
+      window.alert('Assignment accepted.')
       // Notify other components (notification badge/dropdowns) about state change.
       window.dispatchEvent(new Event('notifications:changed'))
       await loadIncidents()
@@ -142,7 +162,8 @@ export default function TechnicianTicketsPage() {
       if (res?.success !== true) {
         throw new Error(res?.message || 'Could not decline assignment')
       }
-      pushToast({ type: 'success', message: 'Assignment declined.' })
+      // Match requested native popup success style.
+      window.alert('Assignment declined.')
       // Notify app-level listeners that notification counts may have changed.
       window.dispatchEvent(new Event('notifications:changed'))
       await loadIncidents()

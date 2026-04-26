@@ -138,6 +138,24 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
 }
 
+.incident-form-grid .incident-input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
+}
+
+.incident-form-grid .incident-input-error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.incident-field-error {
+  display: block;
+  margin-top: 6px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .incident-form-grid textarea {
   resize: vertical;
 }
