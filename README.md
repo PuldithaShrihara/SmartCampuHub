@@ -80,12 +80,19 @@ smart_campus_new/
 │   └── App.jsx      # Routing & protection
 │
 ├── backend/         # Spring Boot API
+
 │   ├── auth/        # Authentication logic
+
 │   ├── booking/     # Booking system
+
 │   ├── incident/    # Incident management
+
 │   ├── resource/    # Resource handling
+
 │   ├── notifications/
+
 │   ├── user/
+
 │   └── security/    # JWT + configs
 
 
