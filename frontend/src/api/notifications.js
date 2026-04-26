@@ -12,3 +12,7 @@ export async function markNotificationRead(notificationId) {
   return apiPatchAuth(`/api/notifications/${notificationId}/read`, {})
 }
 
+export async function markAllNotificationsRead() {
+  return apiPatchAuth('/api/notifications/read-all', {})
+}
+

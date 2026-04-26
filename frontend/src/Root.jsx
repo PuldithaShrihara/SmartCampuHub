@@ -4,12 +4,14 @@ import App from './App.jsx'
 import './index.css'
 import { fetchGoogleClientId } from './api/oauthConfig.js'
 import { GoogleClientIdContext } from './context/GoogleClientIdContext.jsx'
+import { applyStoredTheme } from './utils/theme.js'
 
 export default function Root() {
   const [clientId, setClientId] = useState('')
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    applyStoredTheme()
     fetchGoogleClientId().then((id) => {
       setClientId(id)
       setReady(true)

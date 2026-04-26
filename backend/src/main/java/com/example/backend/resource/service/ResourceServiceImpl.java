@@ -9,6 +9,9 @@ import com.example.backend.resource.entity.ResourceType;
 import com.example.backend.resource.mapper.ResourceMapper;
 import com.example.backend.resource.repository.ResourceRepository;
 import com.example.backend.common.service.FileStorageService;
+import com.example.backend.notifications.NotificationService;
+import com.example.backend.notifications.NotificationType;
+import com.example.backend.user.entity.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -34,6 +37,9 @@ public class ResourceServiceImpl implements ResourceService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     public ResourceResponseDto createResource(ResourceRequestDto dto, MultipartFile photo) {
         String normalizedLocation = normalizeLocation(dto.getLocation());
@@ -46,12 +52,14 @@ public class ResourceServiceImpl implements ResourceService {
             resource.setPhotoUrl(photoUrl);
         }
         Resource saved = repository.save(resource);
+        notifyResourceAdded(saved);
         return mapper.toDto(saved);
     }
 
     @Override
     public ResourceResponseDto updateResource(String id, ResourceRequestDto dto, MultipartFile photo) {
         Resource existing = repository.findById(id).orElseThrow(() -> new RuntimeException("Resource not found"));
+        ResourceStatus previousStatus = existing.getStatus();
         String normalizedLocation = normalizeLocation(dto.getLocation());
         ensureLocationUniqueForUpdate(normalizedLocation, id);
         applyLabDefaultCapacity(dto);
@@ -72,12 +80,15 @@ public class ResourceServiceImpl implements ResourceService {
         }
         
         Resource updated = repository.save(existing);
+        notifyResourceStatusIfCritical(previousStatus, updated.getStatus(), updated);
         return mapper.toDto(updated);
     }
 
     @Override
     public void deleteResource(String id) {
+        Resource existing = repository.findById(id).orElseThrow(() -> new RuntimeException("Resource not found"));
         repository.deleteById(id);
+        notifyResourceRemoved(existing);
     }
 
     @Override
@@ -155,5 +166,49 @@ public class ResourceServiceImpl implements ResourceService {
     private ResourceCategory inferCategory(ResourceType type) {
         if (type == ResourceType.EQUIPMENT) return ResourceCategory.EQUIPMENT;
         return ResourceCategory.SPACE;
+    }
+
+    private void notifyResourceAdded(Resource resource) {
+        String resourceName = resourceName(resource);
+        String message = "A new resource has been added: " + resourceName;
+        notifyRoles(List.of(Role.STUDENT, Role.TECHNICIAN), message, NotificationType.RESOURCE);
+    }
+
+    private void notifyResourceRemoved(Resource resource) {
+        String resourceName = resourceName(resource);
+        String message = "Resource has been removed: " + resourceName;
+        notifyRoles(List.of(Role.STUDENT, Role.TECHNICIAN), message, NotificationType.RESOURCE);
+    }
+
+    private void notifyResourceStatusIfCritical(ResourceStatus previousStatus, ResourceStatus nextStatus, Resource resource) {
+        if (nextStatus == null || nextStatus == previousStatus) {
+            return;
+        }
+        if (nextStatus != ResourceStatus.UNDER_MAINTENANCE && nextStatus != ResourceStatus.OUT_OF_SERVICE) {
+            return;
+        }
+        String resourceName = resourceName(resource);
+        String suffix = nextStatus == ResourceStatus.UNDER_MAINTENANCE
+                ? "under maintenance"
+                : "out of service";
+        String message = "Resource " + resourceName + " is currently " + suffix + ".";
+        notifyRoles(List.of(Role.STUDENT, Role.TECHNICIAN, Role.ADMIN), message, NotificationType.RESOURCE);
+    }
+
+    private void notifyRoles(List<Role> roles, String message, NotificationType type) {
+        for (Role role : roles) {
+            try {
+                notificationService.createForRole(role, message, type);
+            } catch (Exception ignored) {
+                // Do not break core resource workflow if notifications fail.
+            }
+        }
+    }
+
+    private String resourceName(Resource resource) {
+        if (resource == null || resource.getName() == null || resource.getName().isBlank()) {
+            return "Unknown Resource";
+        }
+        return resource.getName().trim();
     }
 }

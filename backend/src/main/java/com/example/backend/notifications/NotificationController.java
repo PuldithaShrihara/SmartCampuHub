@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.backend.notifications.dto.MarkAllReadResultDto;
 import com.example.backend.notifications.dto.NotificationDto;
 import com.example.backend.notifications.dto.UnreadCountDto;
 
@@ -36,6 +37,11 @@ public class NotificationController {
 	@PatchMapping("/{id}/read")
 	public NotificationDto markRead(@PathVariable("id") String notificationId) {
 		return notificationService.markReadForCurrentUser(notificationId);
+	}
+
+	@PatchMapping("/read-all")
+	public MarkAllReadResultDto markAllRead() {
+		return notificationService.markAllReadForCurrentUser();
 	}
 }
 

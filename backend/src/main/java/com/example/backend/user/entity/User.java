@@ -49,6 +49,14 @@ public class User {
 
 	private Instant passwordResetOtpExpiresAt;
 
+	private String avatarUrl;
+
+	private Instant lastLoginAt;
+
+	private boolean deletionRequested;
+
+	private UserPreferences preferences;
+
 	public User() {
 	}
 
@@ -146,6 +154,38 @@ public class User {
 
 	public void setPasswordResetOtpExpiresAt(Instant passwordResetOtpExpiresAt) {
 		this.passwordResetOtpExpiresAt = passwordResetOtpExpiresAt;
+	}
+
+	public String getAvatarUrl() {
+		return avatarUrl;
+	}
+
+	public void setAvatarUrl(String avatarUrl) {
+		this.avatarUrl = avatarUrl;
+	}
+
+	public Instant getLastLoginAt() {
+		return lastLoginAt;
+	}
+
+	public void setLastLoginAt(Instant lastLoginAt) {
+		this.lastLoginAt = lastLoginAt;
+	}
+
+	public boolean isDeletionRequested() {
+		return deletionRequested;
+	}
+
+	public void setDeletionRequested(boolean deletionRequested) {
+		this.deletionRequested = deletionRequested;
+	}
+
+	public UserPreferences getPreferences() {
+		return preferences;
+	}
+
+	public void setPreferences(UserPreferences preferences) {
+		this.preferences = preferences;
 	}
 
 }

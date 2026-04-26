@@ -9,6 +9,8 @@ public interface NotificationRepository extends MongoRepository<Notification, St
 
 	List<Notification> findByUserEmailOrderByCreatedAtDesc(String userEmail);
 
+	List<Notification> findByUserEmailAndReadAtIsNullOrderByCreatedAtDesc(String userEmail);
+
 	long countByUserEmailAndReadAtIsNull(String userEmail);
 
 	Optional<Notification> findByIdAndUserEmail(String id, String userEmail);

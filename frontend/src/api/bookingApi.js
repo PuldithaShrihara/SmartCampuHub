@@ -21,10 +21,14 @@ export async function getAllBookings() {
 }
 
 export async function updateBookingStatus(bookingId, status, rejectionReason = '') {
-    return apiPutAuth(`/api/bookings/${bookingId}/status`, {
+    const res = await apiPutAuth(`/api/bookings/${bookingId}/status`, {
         status,
         rejectionReason,
     })
+    if (res && typeof res === 'object' && 'data' in res) {
+        return res.data
+    }
+    return res
 }
 
 export async function deleteBooking(bookingId) {

@@ -1,13 +1,19 @@
 ﻿import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import BookingCategorySelector from '../../components/booking/BookingCategorySelector.jsx'
 import CreateSpaceBookingForm from '../../components/booking/CreateSpaceBookingForm.jsx'
 import CreateEquipmentBookingForm from '../../components/booking/CreateEquipmentBookingForm.jsx'
 import Modal from '../../components/common/Modal.jsx'
 import { createEquipmentBooking, createSpaceBooking, getMyBookings } from '../../api/bookingApi.js'
 import { fetchActiveResourcesByCategory } from '../../api/resourceApi.js'
+import { useAuth } from '../../context/useAuth.js'
 import './MyBookingsPage.css'
 
+const VIEW_REDIRECT_FLAG = 'smart_campus_view_redirected'
+
 export default function MyBookingsPage() {
+  const navigate = useNavigate()
+  const { preferences } = useAuth()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [bookingCategory, setBookingCategory] = useState('')
   const [bookings, setBookings] = useState([])
@@ -17,7 +23,21 @@ export default function MyBookingsPage() {
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [resourcesError, setResourcesError] = useState('')
   const [submittingBooking, setSubmittingBooking] = useState(false)
-  const [activeTab, setActiveTab] = useState('ALL')
+  const [activeTab, setActiveTab] = useState(() => {
+    const pref = String(preferences?.defaultResourceCategory || '').toUpperCase()
+    return pref === 'SPACE' || pref === 'EQUIPMENT' ? pref : 'ALL'
+  })
+
+  useEffect(() => {
+    if (preferences?.bookingViewMode !== 'GRID') return
+    try {
+      if (sessionStorage.getItem(VIEW_REDIRECT_FLAG) === '1') return
+      sessionStorage.setItem(VIEW_REDIRECT_FLAG, '1')
+    } catch {
+      /* ignore */
+    }
+    navigate('/student/bookings/grid', { replace: true })
+  }, [preferences?.bookingViewMode, navigate])
 
   async function fetchBookings() {
     try {

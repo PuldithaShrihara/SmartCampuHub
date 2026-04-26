@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createIncident, deleteMyIncident, getMyIncidents, updateMyIncident } from '../../api/incidentApi.js'
 import { fetchResources } from '../../api/resourceApi.js'
+import { useToast } from '../../components/toastContext.js'
 import { useAuth } from '../../context/useAuth.js'
 import '../../styles/StudentIncidentsPage.css'
 
@@ -35,6 +36,7 @@ function getStatusCounts(incidents) {
 
 export default function StudentIncidentsPage() {
   const { user } = useAuth()
+  const { pushToast } = useToast()
   const allowedFileTypes = ['image/jpeg', 'image/png', 'application/pdf']
   const maxFileSizeBytes = 2 * 1024 * 1024
   // Reference to "My Incidents" section for smooth scroll after successful submit.
@@ -188,8 +190,8 @@ export default function StudentIncidentsPage() {
         // Remove any selected file while leaving edit mode.
         clearSelectedFile()
         setEditingIncidentId(null)
-        // Use browser popup style feedback instead of inline success banner.
-        window.alert('Incident updated successfully.')
+        // Show success feedback using app toast popup (instead of browser alert).
+        pushToast({ type: 'success', message: 'Incident updated successfully.' })
       } else {
         // Create new incident with optional attachment.
         const response = await createIncident({
@@ -211,8 +213,8 @@ export default function StudentIncidentsPage() {
         // Clear selected file from state and native input.
         clearSelectedFile()
         setEditingIncidentId(null)
-        // Use browser popup style feedback instead of inline success banner.
-        window.alert('Incident submitted successfully.')
+        // Show success feedback using app toast popup (instead of browser alert).
+        pushToast({ type: 'success', message: 'Incident submitted successfully.' })
       }
       // Reload incident table after create/update.
       await loadMyIncidents()
@@ -254,8 +256,8 @@ export default function StudentIncidentsPage() {
     if (!file) return
     // Remove selected file and show confirmation.
     clearSelectedFile()
-    // Match the native popup style requested by user.
-    window.alert('Attachment removed successfully.')
+    // Show success feedback using app toast popup.
+    pushToast({ type: 'success', message: 'Attachment removed successfully.' })
   }
 
   async function handleDeleteIncident(item) {
@@ -274,8 +276,8 @@ export default function StudentIncidentsPage() {
         // If deleted row was being edited, reset edit form.
         cancelEdit()
       }
-      // Match delete confirmation style with native browser popup.
-      window.alert('Incident deleted successfully.')
+      // Show success feedback using app toast popup.
+      pushToast({ type: 'success', message: 'Incident deleted successfully.' })
       await loadMyIncidents()
     } catch (err) {
       setError(err.message || 'Could not delete incident')

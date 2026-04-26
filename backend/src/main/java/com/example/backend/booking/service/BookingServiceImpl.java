@@ -27,10 +27,14 @@ import com.example.backend.booking.entity.BookingType;
 import com.example.backend.booking.mapper.BookingMapper;
 import com.example.backend.booking.repository.BookingRepository;
 import com.example.backend.mail.EmailService;
+import com.example.backend.notifications.NotificationService;
+import com.example.backend.notifications.NotificationType;
+import com.example.backend.notifications.dto.CreateNotificationRequest;
 import com.example.backend.resource.entity.ResourceCategory;
 import com.example.backend.resource.entity.Resource;
 import com.example.backend.resource.entity.ResourceStatus;
 import com.example.backend.resource.repository.ResourceRepository;
+import com.example.backend.user.entity.Role;
 import com.example.backend.user.entity.User;
 import com.example.backend.user.repository.UserRepository;
 import com.example.backend.util.QRCodeGenerator;
@@ -49,14 +53,17 @@ public class BookingServiceImpl implements BookingService {
     private final ResourceRepository resourceRepository;
     private final BookingMapper bookingMapper;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     public BookingServiceImpl(BookingRepository bookingRepository, UserRepository userRepository,
-            ResourceRepository resourceRepository, BookingMapper bookingMapper, EmailService emailService) {
+            ResourceRepository resourceRepository, BookingMapper bookingMapper, EmailService emailService,
+            NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
         this.bookingMapper = bookingMapper;
         this.emailService = emailService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -71,6 +78,7 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingMapper.toEntity(request, user, resource);
         Booking savedBooking = bookingRepository.save(booking);
+        notifyBookingCreated(savedBooking);
         return bookingMapper.toResponse(savedBooking);
     }
 
@@ -107,7 +115,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse updateBookingStatus(String bookingId, BookingStatus status, String rejectionReason) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
 
         booking.setStatus(status);
 
@@ -139,6 +147,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking updatedBooking = bookingRepository.save(booking);
+        notifyBookingStatusUpdated(updatedBooking);
         return bookingMapper.toResponse(updatedBooking);
     }
 
@@ -491,5 +500,75 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private record TimeWindow(LocalTime start, LocalTime end) {
+    }
+
+    private void notifyBookingCreated(Booking booking) {
+        if (booking == null) {
+            return;
+        }
+        String studentEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
+        String resourceName = booking.getResource() != null ? safeText(booking.getResource().getName()) : "resource";
+        if ("N/A".equals(resourceName)) {
+            resourceName = "resource";
+        }
+        String message = "Your booking for " + resourceName
+                + " has been created and is currently in Pending status.";
+        notifyUserEmail(studentEmail, message, NotificationType.BOOKING);
+
+        for (User admin : userRepository.findByRole(Role.ADMIN)) {
+            notifyUserEmail(admin.getEmail(),
+                    "A new booking request has been submitted by "
+                            + (booking.getUser() != null ? safeText(booking.getUser().getFullName()) : "a user")
+                            + " for " + resourceName + ".",
+                    NotificationType.BOOKING);
+        }
+    }
+
+    private void notifyBookingStatusUpdated(Booking booking) {
+        if (booking == null) {
+            return;
+        }
+        String studentEmail = booking.getUser() != null ? booking.getUser().getEmail() : null;
+        if (studentEmail == null || studentEmail.isBlank()) {
+            return;
+        }
+        String resourceName = booking.getResource() != null ? safeText(booking.getResource().getName()) : "resource";
+        if ("N/A".equals(resourceName)) {
+            resourceName = "resource";
+        }
+        String message;
+        if (booking.getStatus() == BookingStatus.APPROVED) {
+            message = "Your booking for " + resourceName + " has been approved.";
+        } else if (booking.getStatus() == BookingStatus.REJECTED) {
+            String reason = booking.getRejectionReason() == null || booking.getRejectionReason().isBlank()
+                    ? "Rejected by admin"
+                    : booking.getRejectionReason().trim();
+            message = "Your booking for " + resourceName + " has been rejected. Reason: " + reason;
+        } else {
+            String status = booking.getStatus() == null ? "updated" : booking.getStatus().name().toLowerCase();
+            message = "Your booking for " + resourceName + " was " + status + ".";
+        }
+        notifyUserEmail(studentEmail, message, NotificationType.BOOKING);
+    }
+
+    private void notifyUserEmail(String userEmail, String message, NotificationType type) {
+        if (userEmail == null || userEmail.isBlank() || message == null || message.isBlank()) {
+            return;
+        }
+        try {
+            notificationService.createForUser(new CreateNotificationRequest(
+                    message,
+                    userEmail.trim().toLowerCase(),
+                    type));
+        } catch (Exception ex) {
+            log.warn("Could not create booking notification for {}: {}", userEmail, ex.getMessage());
+        }
+    }
+
+    private String safeText(String value) {
+        if (value == null || value.isBlank()) {
+            return "N/A";
+        }
+        return value.trim();
     }
 }

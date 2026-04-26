@@ -30,6 +30,9 @@ import com.example.backend.auth.dto.StudentRegisterRequest;
 import com.example.backend.auth.dto.StudentRegistrationResponse;
 import com.example.backend.auth.dto.SuperadminLoginRequest;
 import com.example.backend.mail.EmailService;
+import com.example.backend.notifications.NotificationService;
+import com.example.backend.notifications.NotificationType;
+import com.example.backend.notifications.dto.CreateNotificationRequest;
 import com.example.backend.security.JwtService;
 import com.example.backend.user.entity.Role;
 import com.example.backend.user.entity.User;
@@ -48,6 +51,7 @@ public class AuthService {
 	private final JwtService jwtService;
 	private final EmailService emailService;
 	private final GoogleOAuthTokenService googleOAuthTokenService;
+	private final NotificationService notificationService;
 
 	@Value("${app.google.oauth.allowed-email-domains:}")
 	private String allowedGoogleEmailDomains;
@@ -62,12 +66,14 @@ public class AuthService {
 	private boolean logVerificationOtp;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
-			EmailService emailService, GoogleOAuthTokenService googleOAuthTokenService) {
+			EmailService emailService, GoogleOAuthTokenService googleOAuthTokenService,
+			NotificationService notificationService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.emailService = emailService;
 		this.googleOAuthTokenService = googleOAuthTokenService;
+		this.notificationService = notificationService;
 	}
 
 	public StudentRegistrationResponse registerStudent(StudentRegisterRequest request) {
@@ -95,6 +101,7 @@ public class AuthService {
 			user.setVerificationOtp(null);
 			user.setVerificationOtpExpiresAt(null);
 			userRepository.save(user);
+			notifyUser(user.getEmail(), "Your account was created successfully. You can sign in now.", NotificationType.SYSTEM);
 			return new StudentRegistrationResponse(
 					"Account created. Email verification is disabled in this environment — you can sign in now.", email);
 		}
@@ -116,6 +123,8 @@ public class AuthService {
 		if (logVerificationOtp) {
 			log.warn("Verification OTP generated for {} -> {}", email, otp);
 		}
+		notifyUser(email, "Registration successful. Verify your email using the OTP sent to your inbox.",
+				NotificationType.SYSTEM);
 		return new StudentRegistrationResponse(
 				"Registration successful. Check your email for the OTP to verify your account before signing in.", email);
 	}
@@ -146,6 +155,7 @@ public class AuthService {
 		user.setVerificationOtp(null);
 		user.setVerificationOtpExpiresAt(null);
 		userRepository.save(user);
+		notifyUser(email, "Email verified successfully. Your account is now active.", NotificationType.SYSTEM);
 		return new EmailVerificationResponse("Email verified successfully. You can now sign in.", true);
 	}
 
@@ -180,6 +190,7 @@ public class AuthService {
 		if (logVerificationOtp) {
 			log.warn("Resent verification OTP for {} -> {}", email, otp);
 		}
+		notifyUser(email, "A new verification OTP has been sent to your email.", NotificationType.SYSTEM);
 		return new StudentRegistrationResponse("A new verification OTP has been sent. Check your inbox.", email);
 	}
 
@@ -198,6 +209,7 @@ public class AuthService {
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
 					"Could not send password reset OTP email. Please try again later.");
 		}
+		notifyUser(email, "A password reset OTP was requested for your account.", NotificationType.SYSTEM);
 		return new StudentRegistrationResponse("Password reset OTP sent. Check your email.", email);
 	}
 
@@ -215,6 +227,7 @@ public class AuthService {
 		user.setPasswordResetOtp(null);
 		user.setPasswordResetOtpExpiresAt(null);
 		userRepository.save(user);
+		notifyUser(user.getEmail(), "Your password was reset successfully.", NotificationType.SYSTEM);
 		return new StudentRegistrationResponse("Password reset successful. You can now sign in.", user.getEmail());
 	}
 
@@ -365,6 +378,13 @@ public class AuthService {
 
 	private AuthResponse tokenFor(User user) {
 		Role role = user.getRole() == null ? Role.STUDENT : user.getRole();
+		try {
+			user.setLastLoginAt(Instant.now());
+			userRepository.save(user);
+		}
+		catch (Exception ignored) {
+			// Last-login is best-effort; never block sign-in if persistence fails for this field.
+		}
 		String token = jwtService.generateToken(user.getId(), user.getEmail(), role);
 		return AuthResponse.of(token, user.getEmail(), user.getFullName(), role);
 	}
@@ -415,5 +435,20 @@ public class AuthService {
 	private String generateOtp() {
 		int value = SECURE_RANDOM.nextInt(1_000_000);
 		return String.format("%06d", value);
+	}
+
+	private void notifyUser(String userEmail, String message, NotificationType type) {
+		if (userEmail == null || userEmail.isBlank() || message == null || message.isBlank()) {
+			return;
+		}
+		try {
+			notificationService.createForUser(new CreateNotificationRequest(
+					message,
+					userEmail.trim().toLowerCase(),
+					type));
+		}
+		catch (Exception ex) {
+			log.warn("Could not create auth notification for {}: {}", userEmail, ex.getMessage());
+		}
 	}
 }

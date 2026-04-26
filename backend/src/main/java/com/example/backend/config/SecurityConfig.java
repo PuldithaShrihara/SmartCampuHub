@@ -44,6 +44,8 @@ public class SecurityConfig {
 						.requestMatchers("/api/superadmin/**").hasRole("SUPERADMIN")
 						// Role-based access control: only admin can access admin APIs.
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
+						// Self-service profile/preferences/avatar/export endpoints — any authenticated role.
+						.requestMatchers("/api/me/**").authenticated()
 						// All remaining /api endpoints require login (student/technician/admin as permitted by service logic).
 						.requestMatchers("/api/**").authenticated()
 						.anyRequest().permitAll());
