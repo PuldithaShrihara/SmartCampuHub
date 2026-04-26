@@ -19,6 +19,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,6 +47,8 @@ public class ResourceServiceImpl implements ResourceService {
         ensureLocationUniqueForCreate(normalizedLocation);
         dto.setLocation(normalizedLocation);
         applyLabDefaultCapacity(dto);
+        validateLectureHallCapacity(dto);
+        validateAvailabilityWindowsRange(dto);
         Resource resource = mapper.toEntity(dto);
         if (photo != null && !photo.isEmpty()) {
             String photoUrl = fileStorageService.storeFile(photo, "resources");
@@ -63,6 +66,8 @@ public class ResourceServiceImpl implements ResourceService {
         String normalizedLocation = normalizeLocation(dto.getLocation());
         ensureLocationUniqueForUpdate(normalizedLocation, id);
         applyLabDefaultCapacity(dto);
+        validateLectureHallCapacity(dto);
+        validateAvailabilityWindowsRange(dto);
         existing.setName(dto.getName());
         existing.setType(dto.getType());
         existing.setCategory(dto.getCategory() != null ? dto.getCategory() : inferCategory(dto.getType()));
@@ -155,6 +160,53 @@ public class ResourceServiceImpl implements ResourceService {
     private void applyLabDefaultCapacity(ResourceRequestDto dto) {
         if (dto.getType() == ResourceType.LAB && dto.getCapacity() == null) {
             dto.setCapacity(60);
+        }
+    }
+
+    private void validateLectureHallCapacity(ResourceRequestDto dto) {
+        if (dto.getType() == ResourceType.LECTURE_HALL) {
+            Integer capacity = dto.getCapacity();
+            if (capacity == null || capacity <= 50) {
+                throw new RuntimeException("Lecture hall capacity must be greater than 50");
+            }
+        }
+    }
+
+    private void validateAvailabilityWindowsRange(ResourceRequestDto dto) {
+        List<String> windows = dto.getAvailabilityWindows();
+        if (windows == null || windows.isEmpty()) {
+            throw new RuntimeException("At least one availability window is required");
+        }
+
+        LocalTime dayStart = LocalTime.of(8, 30);
+        LocalTime dayEnd = LocalTime.of(17, 30);
+
+        for (String raw : windows) {
+            if (raw == null || raw.isBlank()) {
+                throw new RuntimeException("Availability window cannot be blank");
+            }
+
+            String slot = raw.trim();
+            String[] parts = slot.split("-");
+            if (parts.length != 2) {
+                throw new RuntimeException("Invalid availability window format. Use HH:MM-HH:MM");
+            }
+
+            LocalTime start;
+            LocalTime end;
+            try {
+                start = LocalTime.parse(parts[0].trim());
+                end = LocalTime.parse(parts[1].trim());
+            } catch (Exception ex) {
+                throw new RuntimeException("Invalid availability window format. Use HH:MM-HH:MM");
+            }
+
+            if (!start.isBefore(end)) {
+                throw new RuntimeException("Availability window start time must be before end time");
+            }
+            if (start.isBefore(dayStart) || end.isAfter(dayEnd)) {
+                throw new RuntimeException("Availability windows must be between 08:30 and 17:30");
+            }
         }
     }
 

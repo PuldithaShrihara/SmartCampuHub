@@ -80,7 +80,7 @@ public class BookingController {
 
         BookingStatus status;
         try {
-            status = BookingStatus.valueOf(rawStatus.toUpperCase());
+            status = BookingStatus.fromExternalValue(rawStatus);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false,
