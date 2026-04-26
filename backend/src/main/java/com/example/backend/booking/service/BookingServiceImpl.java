@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.booking.dto.BookingRequest;
 import com.example.backend.booking.dto.BookingResponse;
+import com.example.backend.booking.dto.QrLookupResponse;
 import com.example.backend.booking.entity.Booking;
 import com.example.backend.booking.entity.BookingStatus;
 import com.example.backend.booking.entity.BookingType;
@@ -150,7 +151,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponse getBookingByQrToken(String qrToken) {
+    public QrLookupResponse getBookingByQrToken(String qrToken) {
         String raw = qrToken == null ? "" : qrToken;
         String normalized = normalizeQrLookupValue(raw);
         if (normalized.isBlank()) {
@@ -203,16 +204,16 @@ public class BookingServiceImpl implements BookingService {
         }
 
         if (booking.getQrScannedAt() != null) {
-            log.info("QR verification rejected. QR already scanned. bookingId='{}', scannedAt='{}'",
+            log.info("QR verification already scanned. bookingId='{}', scannedAt='{}'",
                     booking.getId(), booking.getQrScannedAt());
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "QR already scanned");
+            return new QrLookupResponse(bookingMapper.toResponse(booking), true);
         }
 
         booking.setQrScannedAt(Instant.now());
         Booking saved = bookingRepository.save(booking);
         log.info("QR verification success. Marked scanned. bookingId='{}', scannedAt='{}'",
                 saved.getId(), saved.getQrScannedAt());
-        return bookingMapper.toResponse(saved);
+        return new QrLookupResponse(bookingMapper.toResponse(saved), false);
     }
 
     private String normalizeQrLookupValue(String raw) {
