@@ -66,11 +66,17 @@ Swagger (OpenAPI Docs)
 🏗️ Architecture Overview
 smart_campus_new/
 ├── frontend/        # React app (role-based UI)
+
 │   ├── api/         # API handling
+
 │   ├── components/  # Reusable UI
+
 │   ├── pages/       # Role-based pages
+
 │   ├── context/     # Auth state
+
 │   ├── layouts/     # Layout system
+
 │   └── App.jsx      # Routing & protection
 │
 ├── backend/         # Spring Boot API
