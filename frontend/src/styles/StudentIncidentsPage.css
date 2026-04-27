@@ -186,6 +186,18 @@
   max-width: 280px;
 }
 
+.incident-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.incident-attachment-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .incident-attachment-remove {
   position: absolute;
   top: 6px;
@@ -364,6 +376,12 @@
   color: #166534;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
+}
+
+.incident-status.rejected {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
 }
 
 .incident-empty-state {

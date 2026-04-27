@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   acceptIncidentAssignment,
   declineIncidentAssignment,
@@ -12,7 +12,83 @@ function statusClassForBadge(status) {
   const n = String(status || '').toLowerCase()
   if (n === 'resolved') return 'tech-status-badge resolved'
   if (n === 'in progress') return 'tech-status-badge progress'
+  if (n === 'closed') return 'tech-status-badge closed'
+  if (n === 'rejected') return 'tech-status-badge rejected'
   return 'tech-status-badge pending'
+}
+
+function FilterDropdown({ id, label, value, allLabel, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+
+  useEffect(() => {
+    function handleOutside(event) {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    function handleEscape(event) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  const selectedLabel = value || allLabel
+
+  return (
+    <div className="tech-ticket-filter" ref={rootRef}>
+      <label htmlFor={id}>{label}</label>
+      <button
+        id={id}
+        type="button"
+        className={`tech-filter-btn${open ? ' open' : ''}`}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="tech-filter-btn__text">{selectedLabel}</span>
+        <span className="tech-filter-btn__arrow" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open ? (
+        <div className="tech-filter-menu" role="listbox" aria-label={label}>
+          <button
+            type="button"
+            className={`tech-filter-item${value === '' ? ' active' : ''}`}
+            onClick={() => {
+              onChange('')
+              setOpen(false)
+            }}
+            role="option"
+            aria-selected={value === ''}
+          >
+            {allLabel}
+          </button>
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`tech-filter-item${value === option ? ' active' : ''}`}
+              onClick={() => {
+                onChange(option)
+                setOpen(false)
+              }}
+              role="option"
+              aria-selected={value === option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export default function TechnicianTicketsPage() {
@@ -28,6 +104,8 @@ export default function TechnicianTicketsPage() {
   const [actionLoadingId, setActionLoadingId] = useState('')
   // Optional filter toggle to show only current technician assignments.
   const [onlyMyTickets, setOnlyMyTickets] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
 
   // Derived counters for status mini badges.
   const statusCounts = visibleCounts(incidents)
@@ -67,10 +145,29 @@ export default function TechnicianTicketsPage() {
     return item.assignedTo ? 'Assigned' : 'Unassigned'
   }
 
-  const visibleIncidents = onlyMyTickets
+  const baseVisibleIncidents = onlyMyTickets
     // Optional operator-focused view: keep only incidents assigned to the logged-in technician.
     ? incidents.filter((item) => item.assignedTo?.email === user?.email)
     : incidents
+  const categoryOptions = [...new Set(baseVisibleIncidents.map((item) => String(item.category || '').trim()).filter(Boolean))].sort()
+  const priorityOrder = ['Critical', 'High', 'Medium', 'Low']
+  const priorityOptions = [...new Set(baseVisibleIncidents.map((item) => String(item.priority || '').trim()).filter(Boolean))].sort(
+    (a, b) => {
+      const ai = priorityOrder.indexOf(a)
+      const bi = priorityOrder.indexOf(b)
+      if (ai === -1 && bi === -1) return a.localeCompare(b)
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    },
+  )
+  const visibleIncidents = baseVisibleIncidents.filter((item) => {
+    const category = String(item.category || '').trim()
+    const priority = String(item.priority || '').trim()
+    if (categoryFilter && category !== categoryFilter) return false
+    if (priorityFilter && priority !== priorityFilter) return false
+    return true
+  })
 
   async function handleMarkResolved(incidentId) {
     try {
@@ -161,7 +258,7 @@ export default function TechnicianTicketsPage() {
     if (assignSt === 'Assigned') {
       return (
         <div className="tech-status-cell">
-          <span className="tech-status-badge pending">Pending</span>
+          <span className="tech-status-badge pending">Open</span>
           <span className="tech-status-hint">Accept assignment to start</span>
         </div>
       )
@@ -184,7 +281,7 @@ export default function TechnicianTicketsPage() {
         </div>
       )
     }
-    return <span className="tech-status-badge pending">{item.status || 'Pending'}</span>
+    return <span className="tech-status-badge pending">{item.status || 'Open'}</span>
   }
 
   const awaitingAccept = (item) =>
@@ -225,7 +322,7 @@ export default function TechnicianTicketsPage() {
             <strong>{incidents.length}</strong>
           </div>
           <div className="tech-tickets-mini-badges">
-            <span className="tech-mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="tech-mini-pill pending">Open {statusCounts.pending}</span>
             <span className="tech-mini-pill progress">In Progress {statusCounts.inProgress}</span>
             <span className="tech-mini-pill resolved">Resolved {statusCounts.resolved}</span>
           </div>
@@ -243,6 +340,24 @@ export default function TechnicianTicketsPage() {
             />
             <span>Only my tickets</span>
           </label>
+          <div className="tech-ticket-filter-group">
+            <FilterDropdown
+              id="tech-category-filter"
+              label="Category"
+              value={categoryFilter}
+              allLabel="All categories"
+              options={categoryOptions}
+              onChange={setCategoryFilter}
+            />
+            <FilterDropdown
+              id="tech-priority-filter"
+              label="Priority"
+              value={priorityFilter}
+              allLabel="All priorities"
+              options={priorityOptions}
+              onChange={setPriorityFilter}
+            />
+          </div>
           <span className="tech-tickets-meta">{visibleIncidents.length} ticket(s) shown</span>
         </div>
 
@@ -253,6 +368,8 @@ export default function TechnicianTicketsPage() {
               <th>Title</th>
               <th>User</th>
               <th>Resource</th>
+              <th>Category</th>
+              <th>Priority</th>
               <th>Attachment</th>
               <th>Assignment</th>
               <th>Status</th>
@@ -262,7 +379,7 @@ export default function TechnicianTicketsPage() {
           <tbody>
             {visibleIncidents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="tech-tickets-empty-state">No incidents found.</td>
+                <td colSpan={9} className="tech-tickets-empty-state">No incidents found.</td>
               </tr>
             ) : (
               visibleIncidents.map((item) => (
@@ -270,6 +387,8 @@ export default function TechnicianTicketsPage() {
                   <td className="tech-tickets-title-cell">{item.title}</td>
                   <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
                   <td>{item.resourceId?.name || '-'}</td>
+                  <td>{item.category || <span className="tech-muted">-</span>}</td>
+                  <td>{item.priority || <span className="tech-muted">-</span>}</td>
                   <td>
                     {item.attachmentPath ? (
                       <a className="tech-file-link" href={item.attachmentPath} target="_blank" rel="noreferrer">
