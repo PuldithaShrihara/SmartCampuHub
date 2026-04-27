@@ -4,6 +4,9 @@ import { fetchResources } from '../../api/resourceApi.js'
 import { useAuth } from '../../context/useAuth.js'
 import '../../styles/StudentIncidentsPage.css'
 
+const CATEGORY_OPTIONS = ['Electrical', 'Network', 'Hardware', 'Facility', 'Safety', 'Other']
+const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical']
+
 function statusClass(status) {
   // Convert incoming status to normalized lowercase text.
   const normalized = String(status || '').toLowerCase()
@@ -11,6 +14,8 @@ function statusClass(status) {
   if (normalized === 'resolved') return 'incident-status resolved'
   // If status is in progress, return in-progress badge class.
   if (normalized === 'in progress') return 'incident-status progress'
+  if (normalized === 'closed') return 'incident-status resolved'
+  if (normalized === 'rejected') return 'incident-status rejected'
   // For any other value (including empty), use pending style.
   return 'incident-status pending'
 }
@@ -35,7 +40,7 @@ function getStatusCounts(incidents) {
 
 export default function StudentIncidentsPage() {
   const { user } = useAuth()
-  const allowedFileTypes = ['image/jpeg', 'image/png', 'application/pdf']
+  const allowedFileTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
   const maxFileSizeBytes = 2 * 1024 * 1024
   // Reference to "My Incidents" section for smooth scroll after successful submit.
   const incidentsListRef = useRef(null)
@@ -44,8 +49,10 @@ export default function StudentIncidentsPage() {
   // Form fields for creating/updating incidents.
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('')
+  const [priority, setPriority] = useState('Medium')
   const [resourceId, setResourceId] = useState('')
-  const [file, setFile] = useState(null)
+  const [files, setFiles] = useState([])
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [errors, setErrors] = useState({})
@@ -59,15 +66,14 @@ export default function StudentIncidentsPage() {
   // If not null, form is in "edit existing incident" mode.
   const [editingIncidentId, setEditingIncidentId] = useState(null)
   // Object URL for image preview.
-  const [filePreviewUrl, setFilePreviewUrl] = useState('')
+  const [filePreviewUrls, setFilePreviewUrls] = useState([])
   // Derived values used in UI.
   const statusCounts = getStatusCounts(incidents)
-  const isImageFile = Boolean(file?.type?.startsWith('image/'))
-  const isPdfFile = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf')
+  const hasAttachments = files.length > 0
 
   function clearSelectedFile() {
     // Clear React state.
-    setFile(null)
+    setFiles([])
     if (fileInputRef.current) {
       // Also clear browser native file input value.
       fileInputRef.current.value = ''
@@ -75,19 +81,16 @@ export default function StudentIncidentsPage() {
   }
 
   useEffect(() => {
-    // If no image file is selected, clear preview URL.
-    if (!file || !isImageFile) {
-      setFilePreviewUrl('')
+    if (!files.length) {
+      setFilePreviewUrls([])
       return
     }
-    // Create local browser URL to preview selected image.
-    const objectUrl = URL.createObjectURL(file)
-    setFilePreviewUrl(objectUrl)
+    const objectUrls = files.map((selectedFile) => URL.createObjectURL(selectedFile))
+    setFilePreviewUrls(objectUrls)
     return () => {
-      // Free memory when file changes or component unmounts.
-      URL.revokeObjectURL(objectUrl)
+      objectUrls.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [file, isImageFile])
+  }, [files])
 
   useEffect(() => {
     // Auto-fill identity fields from logged-in user session data.
@@ -150,15 +153,26 @@ export default function StudentIncidentsPage() {
     if (!emailRegex.test(email.trim())) {
       nextErrors.email = 'Please enter a valid email address'
     }
+    if (fullName.trim().length < 2) {
+      nextErrors.fullName = 'Please enter a valid contact name'
+    }
+    if (!category.trim()) {
+      nextErrors.category = 'Please select a category'
+    }
+    if (!priority.trim()) {
+      nextErrors.priority = 'Please select a priority'
+    }
     // Validation D: user must explicitly choose a resource (default option is empty).
     if (!resourceId.trim()) {
       nextErrors.resourceId = 'Please select a resource'
     }
     // Validation E: optional attachment must match allowed types/size before upload.
-    if (file && !allowedFileTypes.includes(file.type)) {
-      nextErrors.file = 'Only image or PDF files are allowed'
-    } else if (file && file.size > maxFileSizeBytes) {
-      nextErrors.file = 'File size must be less than 2MB'
+    if (files.length > 3) {
+      nextErrors.file = 'Maximum 3 image attachments are allowed'
+    } else if (files.some((file) => !allowedFileTypes.includes(file.type))) {
+      nextErrors.file = 'Only image attachments are allowed (jpeg, png, webp, gif)'
+    } else if (files.some((file) => file.size > maxFileSizeBytes)) {
+      nextErrors.file = 'Each file size must be less than 2MB'
     }
 
     setErrors(nextErrors)
@@ -180,10 +194,16 @@ export default function StudentIncidentsPage() {
           // Trim spaces to avoid accidental whitespace-only values.
           title: title.trim(),
           description: description.trim(),
+          category: category.trim(),
+          priority: priority.trim(),
           resourceId: resourceId.trim(),
+          preferredContactName: fullName.trim(),
+          preferredContactEmail: email.trim(),
         })
         setTitle('')
         setDescription('')
+        setCategory('')
+        setPriority('Medium')
         setResourceId('')
         // Remove any selected file while leaving edit mode.
         clearSelectedFile()
@@ -194,8 +214,12 @@ export default function StudentIncidentsPage() {
         const response = await createIncident({
           title: title.trim(),
           description: description.trim(),
+          category: category.trim(),
+          priority: priority.trim(),
           resourceId: resourceId.trim(),
-          file,
+          preferredContactName: fullName.trim(),
+          preferredContactEmail: email.trim(),
+          files,
         })
         // Only treat as success when API contract explicitly confirms success=true.
         if (response?.success !== true) {
@@ -205,6 +229,8 @@ export default function StudentIncidentsPage() {
         // (User wants only one submit success message.)
         setTitle('')
         setDescription('')
+        setCategory('')
+        setPriority('Medium')
         setResourceId('')
         // Clear selected file from state and native input.
         clearSelectedFile()
@@ -225,13 +251,17 @@ export default function StudentIncidentsPage() {
   }
 
   function startEditIncident(item) {
-    // Business rule: student can edit only while the incident is still pending.
-    if (String(item.status || '').toLowerCase() !== 'pending') return
+    // Business rule: student can edit only while the incident is still open.
+    if (String(item.status || '').toLowerCase() !== 'open') return
     setEditingIncidentId(item.id)
     // Copy selected row values into form inputs.
     setTitle(item.title || '')
     setDescription(item.description || '')
+    setCategory(item.category || '')
+    setPriority(item.priority || 'Medium')
     setResourceId(item.resourceId?.id || item.resourceId || '')
+    setFullName(item.preferredContactName || user?.fullName || '')
+    setEmail(item.preferredContactEmail || user?.email || '')
     clearSelectedFile()
     setError('')
   }
@@ -241,23 +271,27 @@ export default function StudentIncidentsPage() {
     setEditingIncidentId(null)
     setTitle('')
     setDescription('')
+    setCategory('')
+    setPriority('Medium')
     setResourceId(resources.length > 0 ? resources[0].id : '')
+    setFullName(user?.fullName || '')
+    setEmail(user?.email || '')
     clearSelectedFile()
     setError('')
   }
 
   function handleRemoveAttachment() {
     // Local-only UI action: no backend call needed before submit.
-    if (!file) return
+    if (!files.length) return
     // Remove selected file and show confirmation.
     clearSelectedFile()
     window.alert('Attachment removed successfully.')
   }
 
   async function handleDeleteIncident(item) {
-    // Business rule mirrors backend guard: only pending incidents can be deleted by student.
-    if (String(item.status || '').toLowerCase() !== 'pending') return
-    const confirmed = window.confirm('Delete this pending incident? This action cannot be undone.')
+    // Business rule mirrors backend guard: only open incidents can be deleted by student.
+    if (String(item.status || '').toLowerCase() !== 'open') return
+    const confirmed = window.confirm('Delete this open incident? This action cannot be undone.')
     // Stop here if user cancels the confirmation dialog.
     if (!confirmed) return
 
@@ -281,7 +315,7 @@ export default function StudentIncidentsPage() {
 
   return (
     <div className="incident-page">
-      {/* Hero card: title + quick counters (Pending/In Progress/Resolved). */}
+      {/* Hero card: title + quick counters (Open/In Progress/Resolved). */}
       <section className="dash-card incident-hero">
         <div className="incident-hero-copy">
           <h2>Report an Incident</h2>
@@ -293,7 +327,7 @@ export default function StudentIncidentsPage() {
             <strong>{incidents.length}</strong>
           </div>
           <div className="incident-mini-badges">
-            <span className="mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="mini-pill pending">Open {statusCounts.pending}</span>
             <span className="mini-pill progress">In Progress {statusCounts.inProgress}</span>
             <span className="mini-pill resolved">Resolved {statusCounts.resolved}</span>
           </div>
@@ -311,10 +345,13 @@ export default function StudentIncidentsPage() {
             <label htmlFor="incident-full-name">Full Name</label>
             <input
               id="incident-full-name"
+              className={errors.fullName ? 'incident-input-error' : ''}
               value={fullName}
-              readOnly
+              onChange={(e) => setFullName(e.target.value)}
               placeholder="Full name"
+              required
             />
+            {errors.fullName ? <small className="incident-field-error">{errors.fullName}</small> : null}
           </div>
           <div className="incident-field">
             <label htmlFor="incident-email">Email</label>
@@ -356,6 +393,43 @@ export default function StudentIncidentsPage() {
             />
             {errors.description ? <small className="incident-field-error">{errors.description}</small> : null}
           </div>
+          <div className="incident-form-row">
+            <div className="incident-field incident-field-half">
+              <label htmlFor="incident-category">Category</label>
+              <select
+                id="incident-category"
+                className={errors.category ? 'incident-input-error' : ''}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+              >
+                <option value="">Select category</option>
+                {CATEGORY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {errors.category ? <small className="incident-field-error">{errors.category}</small> : null}
+            </div>
+            <div className="incident-field incident-field-half">
+              <label htmlFor="incident-priority">Priority</label>
+              <select
+                id="incident-priority"
+                className={errors.priority ? 'incident-input-error' : ''}
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                required
+              >
+                {PRIORITY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {errors.priority ? <small className="incident-field-error">{errors.priority}</small> : null}
+            </div>
+          </div>
           {/* Row with resource selector + optional file upload. */}
           <div className="incident-form-row">
             <div className="incident-field incident-field-half">
@@ -388,10 +462,10 @@ export default function StudentIncidentsPage() {
                 id="incident-file"
                 className={errors.file ? 'incident-input-error' : ''}
                 type="file"
-                // Allow only image or PDF file types from file picker.
-                accept="image/*,.pdf"
-                // Store first selected file object in state.
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                // Allow up to 3 image evidence files.
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 3))}
                 // Business rule: attachment update disabled in edit mode.
                 disabled={Boolean(editingIncidentId)}
               />
@@ -399,12 +473,12 @@ export default function StudentIncidentsPage() {
                 {/* Context text changes based on mode and selected file. */}
                 {editingIncidentId
                   ? 'Attachment update is disabled while editing.'
-                  : file
-                    ? `Selected: ${file.name}`
-                    : 'Supported: image, pdf'}
+                  : hasAttachments
+                    ? `Selected ${files.length} image${files.length === 1 ? '' : 's'}`
+                    : 'Supported: jpeg, png, webp, gif (max 3)'}
               </small>
               {errors.file ? <small className="incident-field-error">{errors.file}</small> : null}
-              {!editingIncidentId && file ? (
+              {!editingIncidentId && hasAttachments ? (
                 // Preview block appears only for create mode with selected file.
                 <div className="incident-attachment-preview">
                   <button
@@ -416,22 +490,18 @@ export default function StudentIncidentsPage() {
                   >
                     ×
                   </button>
-                  {/* Show image preview when selected file is an image. */}
-                  {isImageFile && filePreviewUrl ? (
-                    <>
-                      <img src={filePreviewUrl} alt="Attachment preview" className="incident-attachment-image" />
-                      <span className="incident-attachment-label">Image preview</span>
-                    </>
-                  ) : isPdfFile ? (
-                    // Show PDF label/card when selected file is PDF.
-                    <div className="incident-attachment-pdf">
-                      <span className="incident-pdf-icon">PDF</span>
-                      <span className="incident-attachment-label">{file.name}</span>
-                    </div>
-                  ) : (
-                    // Generic filename fallback for other accepted types.
-                    <span className="incident-attachment-label">{file.name}</span>
-                  )}
+                  <div className="incident-attachment-grid">
+                    {files.map((selectedFile, index) => (
+                      <div key={`${selectedFile.name}-${index}`} className="incident-attachment-thumb-wrap">
+                        <img
+                          src={filePreviewUrls[index]}
+                          alt={`Attachment ${index + 1}`}
+                          className="incident-attachment-image"
+                        />
+                        <span className="incident-attachment-label">{selectedFile.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -458,6 +528,8 @@ export default function StudentIncidentsPage() {
             <thead>
               <tr>
                 <th>Title</th>
+                <th>Category</th>
+                <th>Priority</th>
                 <th>Status</th>
                 <th>Resource</th>
                 <th>Remarks</th>
@@ -468,7 +540,7 @@ export default function StudentIncidentsPage() {
               {/* Empty-state row when no incidents exist. */}
               {incidents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="incident-empty-state">
+                  <td colSpan={7} className="incident-empty-state">
                     No incidents yet. Submit your first incident above.
                   </td>
                 </tr>
@@ -477,6 +549,8 @@ export default function StudentIncidentsPage() {
                 incidents.map((item) => (
                   <tr key={item.id}>
                     <td>{item.title}</td>
+                    <td>{item.category || '-'}</td>
+                    <td>{item.priority || '-'}</td>
                     <td>
                       {/* Colored status badge: Pending / In Progress / Resolved. */}
                       <span className={statusClass(item.status)}>{item.status}</span>
@@ -484,8 +558,8 @@ export default function StudentIncidentsPage() {
                     <td>{item.resourceId?.name || item.resourceId || '-'}</td>
                     <td>{item.technicianRemarks || '-'}</td>
                     <td>
-                      {/* Business rule: edit/delete allowed only while status is pending. */}
-                      {String(item.status || '').toLowerCase() === 'pending' ? (
+                      {/* Business rule: edit/delete allowed only while status is open. */}
+                      {String(item.status || '').toLowerCase() === 'open' ? (
                         <div className="incident-action-group">
                           <button
                             type="button"

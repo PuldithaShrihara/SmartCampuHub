@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { FaFilePdf } from 'react-icons/fa'
+import { jsPDF } from 'jspdf'
 import { adminListTechnicians } from '../../api/auth.js'
 import { getAllIncidents, updateIncident } from '../../api/incidentApi.js'
 import '../../styles/TicketsPage.css'
 
-const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved']
+const STATUS_OPTIONS = ['Open', 'Resolved', 'Closed', 'Rejected']
 
 function statusClass(status) {
   // Convert any incoming value to lowercase text so comparisons are safe.
@@ -12,8 +14,98 @@ function statusClass(status) {
   if (normalized === 'resolved') return 'ticket-status resolved'
   // Return CSS class for In Progress status badge.
   if (normalized === 'in progress') return 'ticket-status progress'
+  if (normalized === 'closed') return 'ticket-status closed'
+  if (normalized === 'rejected') return 'ticket-status rejected'
   // Default badge class is Pending.
   return 'ticket-status pending'
+}
+
+function priorityClass(priority) {
+  const p = String(priority || '').toLowerCase()
+  if (p === 'critical') return 'ticket-priority critical'
+  if (p === 'high') return 'ticket-priority high'
+  if (p === 'medium') return 'ticket-priority medium'
+  if (p === 'low') return 'ticket-priority low'
+  return 'ticket-priority'
+}
+
+function categoryClass(category) {
+  if (!category) return 'ticket-category'
+  return 'ticket-category'
+}
+
+function FilterDropdown({ id, label, value, allLabel, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+
+  useEffect(() => {
+    function handleOutside(event) {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    function handleEscape(event) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  const selectedLabel = value || allLabel
+
+  return (
+    <div className="tickets-filter" ref={rootRef}>
+      <label htmlFor={id}>{label}</label>
+      <button
+        id={id}
+        type="button"
+        className={`tickets-filter-btn${open ? ' open' : ''}`}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="tickets-filter-btn__text">{selectedLabel}</span>
+        <span className="tickets-filter-btn__arrow" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open ? (
+        <div className="tickets-filter-menu" role="listbox" aria-label={label}>
+          <button
+            type="button"
+            className={`tickets-filter-item${value === '' ? ' active' : ''}`}
+            onClick={() => {
+              onChange('')
+              setOpen(false)
+            }}
+            role="option"
+            aria-selected={value === ''}
+          >
+            {allLabel}
+          </button>
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`tickets-filter-item${value === option ? ' active' : ''}`}
+              onClick={() => {
+                onChange(option)
+                setOpen(false)
+              }}
+              role="option"
+              aria-selected={value === option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 function effectiveAssignmentStatus(item) {
@@ -26,14 +118,20 @@ function effectiveAssignmentStatus(item) {
 function statusFlowHint(item) {
   const st = String(item.status || '').toLowerCase()
   const assign = effectiveAssignmentStatus(item)
-  if (st === 'pending' && assign === 'Assigned') {
+  if (st === 'open' && assign === 'Assigned') {
     return 'Waiting for technician to accept'
   }
   if (st === 'in progress') {
     return 'Technician has accepted; work in progress'
   }
   if (st === 'resolved') {
+    return 'Ready for closure'
+  }
+  if (st === 'closed') {
     return 'Closed'
+  }
+  if (st === 'rejected') {
+    return 'Rejected by admin'
   }
   return null
 }
@@ -59,6 +157,8 @@ function getStatusCounts(incidents) {
 export default function Tickets() {
   // Selected status filter from dropdown (empty means all statuses).
   const [statusFilter, setStatusFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
   // Full incident list for admin table.
   const [incidents, setIncidents] = useState([])
   // Technician list used in assignment dropdown.
@@ -75,6 +175,229 @@ export default function Tickets() {
   const [technicianError, setTechnicianError] = useState('')
   // Derived totals used in hero summary cards.
   const statusCounts = getStatusCounts(incidents)
+  const categoryOptions = [...new Set(incidents.map((item) => String(item.category || '').trim()).filter(Boolean))].sort()
+  const priorityOrder = ['Critical', 'High', 'Medium', 'Low']
+  const priorityOptions = [...new Set(incidents.map((item) => String(item.priority || '').trim()).filter(Boolean))].sort(
+    (a, b) => {
+      const ai = priorityOrder.indexOf(a)
+      const bi = priorityOrder.indexOf(b)
+      if (ai === -1 && bi === -1) return a.localeCompare(b)
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    },
+  )
+  const visibleIncidents = incidents.filter((item) => {
+    const category = String(item.category || '').trim()
+    const priority = String(item.priority || '').trim()
+    if (categoryFilter && category !== categoryFilter) return false
+    if (priorityFilter && priority !== priorityFilter) return false
+    return true
+  })
+  const generatedOn = new Date().toLocaleString('en-US')
+
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 42
+    const usableWidth = pageWidth - margin * 2
+    let y = margin
+
+    const colors = {
+      brand: [79, 70, 229],
+      textPrimary: [15, 23, 42],
+      textSecondary: [71, 85, 105],
+      border: [203, 213, 225],
+      cardBg: [248, 250, 252],
+      white: [255, 255, 255],
+    }
+
+    const setTextColor = (rgb) => doc.setTextColor(rgb[0], rgb[1], rgb[2])
+
+    const addPageFooter = () => {
+      const footerY = pageHeight - 20
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      setTextColor(colors.textSecondary)
+      doc.text(`Generated ${generatedOn}`, margin, footerY)
+      doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - margin, footerY, { align: 'right' })
+      setTextColor(colors.textPrimary)
+    }
+
+    const ensurePageSpace = (requiredHeight = 22) => {
+      if (y + requiredHeight <= pageHeight - margin) return
+      addPageFooter()
+      doc.addPage()
+      y = margin
+      drawHeader(true)
+    }
+
+    const drawHeader = (isContinuation = false) => {
+      const headerHeight = 74
+      doc.setFillColor(colors.brand[0], colors.brand[1], colors.brand[2])
+      doc.roundedRect(margin, y, usableWidth, headerHeight, 10, 10, 'F')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      setTextColor(colors.white)
+      doc.text(isContinuation ? 'Incident Tickets Report (continued)' : 'Incident Tickets Report', margin + 16, y + 30)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.text(`Status filter: ${statusFilter || 'All'}`, margin + 16, y + 50)
+      doc.text(
+        `Category: ${categoryFilter || 'All'} | Priority: ${priorityFilter || 'All'}`,
+        margin + 16,
+        y + 64
+      )
+      doc.text(`Prepared: ${generatedOn}`, pageWidth - margin - 16, y + 50, { align: 'right' })
+
+      setTextColor(colors.textPrimary)
+      y += headerHeight + 16
+    }
+
+    const addSectionTitle = (title) => {
+      ensurePageSpace(30)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12.5)
+      setTextColor(colors.textPrimary)
+      doc.text(title, margin, y)
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.line(margin, y + 8, pageWidth - margin, y + 8)
+      y += 22
+    }
+
+    const addKpiRow = (leftLabel, leftValue, rightLabel, rightValue) => {
+      const cardGap = 12
+      const cardWidth = (usableWidth - cardGap) / 2
+      const cardHeight = 54
+      ensurePageSpace(cardHeight + 10)
+
+      ;[
+        { x: margin, label: leftLabel, value: leftValue },
+        { x: margin + cardWidth + cardGap, label: rightLabel, value: rightValue },
+      ].forEach((item) => {
+        doc.setFillColor(colors.cardBg[0], colors.cardBg[1], colors.cardBg[2])
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+        doc.roundedRect(item.x, y, cardWidth, cardHeight, 7, 7, 'FD')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        setTextColor(colors.textSecondary)
+        doc.text(String(item.label).toUpperCase(), item.x + 10, y + 18)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        setTextColor(colors.textPrimary)
+        const val = doc.splitTextToSize(String(item.value), cardWidth - 20)
+        doc.text(val[0] || '-', item.x + 10, y + 38)
+      })
+
+      y += cardHeight + 10
+    }
+
+    const safe = (value) => {
+      const text = String(value ?? '').trim()
+      return text.length ? text : '-'
+    }
+
+    const tableColumns = [
+      { key: 'title', label: 'Title', width: 120 },
+      { key: 'user', label: 'User', width: 80 },
+      { key: 'resource', label: 'Resource', width: 75 },
+      { key: 'category', label: 'Category', width: 60 },
+      { key: 'priority', label: 'Priority', width: 50 },
+      { key: 'status', label: 'Status', width: 50 },
+      { key: 'assigned', label: 'Technician', width: 64 },
+    ]
+
+    const drawTableHeader = () => {
+      ensurePageSpace(26)
+      doc.setFillColor(248, 250, 252)
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.rect(margin, y, usableWidth, 22, 'FD')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9.5)
+      setTextColor(colors.textPrimary)
+      let x = margin + 6
+      tableColumns.forEach((col) => {
+        doc.text(col.label, x, y + 15)
+        x += col.width
+      })
+
+      y += 22
+    }
+
+    const drawRow = (row) => {
+      const rowHeight = 34
+      ensurePageSpace(rowHeight + 4)
+
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+      doc.rect(margin, y, usableWidth, rowHeight)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9.2)
+      setTextColor(colors.textSecondary)
+
+      let x = margin + 6
+      const maxLineWidthPadding = 12
+      tableColumns.forEach((col) => {
+        const text = safe(row[col.key])
+        const lines = doc.splitTextToSize(text, col.width - maxLineWidthPadding)
+        doc.text(String(lines[0] || '-'), x, y + 14)
+        if (lines[1]) {
+          doc.text(String(lines[1]), x, y + 26)
+        }
+        x += col.width
+      })
+
+      y += rowHeight
+      setTextColor(colors.textPrimary)
+    }
+
+    drawHeader(false)
+
+    addSectionTitle('Summary')
+    addKpiRow('Total tickets (all)', incidents.length, 'Tickets in view (filtered)', visibleIncidents.length)
+    addKpiRow('Open', statusCounts.pending, 'In progress', statusCounts.inProgress)
+    addKpiRow('Resolved', statusCounts.resolved, 'Generated on', new Date().toISOString().slice(0, 10))
+
+    addSectionTitle('Tickets List')
+    drawTableHeader()
+
+    if (!visibleIncidents.length) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10.5)
+      setTextColor(colors.textSecondary)
+      doc.text('No incidents found for the selected filters.', margin, y + 10)
+      y += 18
+    } else {
+      visibleIncidents.forEach((item) => {
+        const assignedText =
+          typeof item.assignedTo === 'object'
+            ? item.assignedTo?.fullName || item.assignedTo?.email || '-'
+            : item.assignedTo
+              ? 'Assigned'
+              : '-'
+        drawRow({
+          title: safe(item.title),
+          user: safe(item.userId?.fullName || item.userId?.email),
+          resource: safe(item.resourceId?.name),
+          category: safe(item.category),
+          priority: safe(item.priority),
+          status: safe(item.status),
+          assigned: safe(assignedText),
+        })
+      })
+    }
+
+    addPageFooter()
+    doc.save(`admin-incidents-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+  }
 
   async function loadIncidents() {
     // Method purpose: fetch incidents (all or by selected status).
@@ -155,7 +478,7 @@ export default function Tickets() {
             <strong>{incidents.length}</strong>
           </div>
           <div className="tickets-mini-badges">
-            <span className="mini-pill pending">Pending {statusCounts.pending}</span>
+            <span className="mini-pill pending">Open {statusCounts.pending}</span>
             <span className="mini-pill progress">In Progress {statusCounts.inProgress}</span>
             <span className="mini-pill resolved">Resolved {statusCounts.resolved}</span>
           </div>
@@ -166,27 +489,46 @@ export default function Tickets() {
       {error ? <div className="dash-msg error">{error}</div> : null}
 
       <div className="tickets-toolbar">
-        <div className="tickets-filter">
-          <label htmlFor="ticket-status-filter">Filter by status</label>
-          <select
-            id="ticket-status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+        <FilterDropdown
+          id="ticket-status-filter"
+          label="Filter by status"
+          value={statusFilter}
+          allLabel="All"
+          options={STATUS_OPTIONS}
+          onChange={setStatusFilter}
+        />
+        <FilterDropdown
+          id="ticket-category-filter"
+          label="Filter by category"
+          value={categoryFilter}
+          allLabel="All categories"
+          options={categoryOptions}
+          onChange={setCategoryFilter}
+        />
+        <FilterDropdown
+          id="ticket-priority-filter"
+          label="Filter by priority"
+          value={priorityFilter}
+          allLabel="All priorities"
+          options={priorityOptions}
+          onChange={setPriorityFilter}
+        />
+        <button
+          type="button"
+          className="tickets-pdf-btn"
+          onClick={handleDownloadPdf}
+          disabled={loading}
+          title="Generate a PDF report for the current view"
+        >
+          <FaFilePdf aria-hidden />
+          Generate PDF
+        </button>
         <span className="tickets-meta">
           {loading
             ? 'Loading incidents...'
             : loadingTechnicians
-              ? `Refreshing availability... ${incidents.length} ticket(s) found`
-              : `${incidents.length} ticket(s) found`}
+              ? `Refreshing availability... ${visibleIncidents.length} ticket(s) found`
+              : `${visibleIncidents.length} ticket(s) found`}
         </span>
       </div>
       {technicianError ? <div className="dash-msg error">{technicianError}</div> : null}
@@ -198,6 +540,8 @@ export default function Tickets() {
               <th>Title</th>
               <th>User</th>
               <th>Resource</th>
+              <th>Category</th>
+              <th>Priority</th>
               <th>Attachment</th>
               <th>Status</th>
               <th>Assigned technician</th>
@@ -205,14 +549,14 @@ export default function Tickets() {
             </tr>
           </thead>
           <tbody>
-            {incidents.length === 0 ? (
+            {visibleIncidents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="tickets-empty-state">
+                <td colSpan={9} className="tickets-empty-state">
                   No incidents found.
                 </td>
               </tr>
             ) : (
-              incidents.map((item) => {
+              visibleIncidents.map((item) => {
                 // Support both expanded object form and plain id form for backward-compatible API responses.
                 const assignedId =
                   typeof item.assignedTo === 'object' && item.assignedTo?.id
@@ -225,13 +569,39 @@ export default function Tickets() {
                     ? item.assignedTo?.fullName || item.assignedTo?.email || 'Current technician'
                     : 'Current technician'
                 const isAssignedTechnicianAvailable = technicians.some((t) => t.id === assignedId)
-                const isResolved = String(item.status || '').toLowerCase() === 'resolved'
+                const normalizedStatus = String(item.status || '').toLowerCase()
+                const normalizedAssignmentStatus = String(item.assignmentStatus || '').toLowerCase()
+                const assignmentLocked =
+                  normalizedStatus === 'resolved' ||
+                  normalizedStatus === 'closed' ||
+                  normalizedStatus === 'rejected' ||
+                  normalizedAssignmentStatus === 'accepted'
                 const statusHint = statusFlowHint(item)
                 return (
                   <tr key={item.id}>
-                    <td className="tickets-title-cell">{item.title}</td>
-                    <td>{item.userId?.fullName || item.userId?.email || '-'}</td>
-                    <td>{item.resourceId?.name || '-'}</td>
+                    <td className="tickets-title-cell" title={item.title || '-'}>
+                      <span className="tickets-cell-ellipsis">{item.title || '-'}</span>
+                    </td>
+                    <td title={item.userId?.fullName || item.userId?.email || '-'}>
+                      <span className="tickets-cell-ellipsis">{item.userId?.fullName || item.userId?.email || '-'}</span>
+                    </td>
+                    <td title={item.resourceId?.name || '-'}>
+                      <span className="tickets-cell-ellipsis">{item.resourceId?.name || '-'}</span>
+                    </td>
+                    <td>
+                      {item.category ? (
+                        <span className={categoryClass(item.category)}>{item.category}</span>
+                      ) : (
+                        <span className="tickets-muted">-</span>
+                      )}
+                    </td>
+                    <td>
+                      {item.priority ? (
+                        <span className={priorityClass(item.priority)}>{item.priority}</span>
+                      ) : (
+                        <span className="tickets-muted">-</span>
+                      )}
+                    </td>
                     <td>
                       {item.attachmentPath ? (
                         <a className="tickets-file-link" href={item.attachmentPath} target="_blank" rel="noreferrer">
@@ -255,7 +625,7 @@ export default function Tickets() {
                       <select
                         className="tickets-assign-select"
                         value={assignedId}
-                        disabled={assigningId === item.id || isResolved}
+                        disabled={assigningId === item.id || assignmentLocked}
                         onChange={(e) => handleAssignTechnician(item.id, e.target.value)}
                         aria-label={`Assign technician for ${item.title}`}
                       >
@@ -270,7 +640,13 @@ export default function Tickets() {
                         ))}
                       </select>
                     </td>
-                    <td>{item.technicianRemarks || <span className="tickets-muted">-</span>}</td>
+                    <td title={item.technicianRemarks || '-'}>
+                      {item.technicianRemarks ? (
+                        <span className="tickets-cell-ellipsis">{item.technicianRemarks}</span>
+                      ) : (
+                        <span className="tickets-muted">-</span>
+                      )}
+                    </td>
                   </tr>
                 )
               })

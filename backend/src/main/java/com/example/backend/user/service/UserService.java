@@ -18,6 +18,9 @@ import com.example.backend.user.repository.UserRepository;
 
 @Service
 public class UserService {
+	private static final List<IncidentStatus> ACTIVE_TASK_STATUSES = List.of(
+			IncidentStatus.OPEN,
+			IncidentStatus.IN_PROGRESS);
 
 	private final UserManagementService userManagementService;
 	private final UserRepository userRepository;
@@ -44,7 +47,7 @@ public class UserService {
 	public List<UserSummaryDto> listAvailableTechnicians() {
 		return userManagementService.listTechnicians()
 				.stream()
-				.filter(tech -> !incidentRepository.existsByAssignedToAndStatusNot(tech.id(), IncidentStatus.RESOLVED))
+				.filter(tech -> !incidentRepository.existsByAssignedToAndStatusIn(tech.id(), ACTIVE_TASK_STATUSES))
 				.toList();
 	}
 

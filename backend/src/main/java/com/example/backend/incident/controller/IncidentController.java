@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.backend.common.response.ApiResponse;
+import com.example.backend.incident.dto.IncidentCommentRequest;
+import com.example.backend.incident.dto.IncidentCommentResponseDto;
 import com.example.backend.incident.dto.IncidentResponseDto;
 import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
@@ -38,15 +40,33 @@ public class IncidentController {
 	public ResponseEntity<ApiResponse<IncidentResponseDto>> createIncident(
 			@RequestParam("title") String title,
 			@RequestParam("description") String description,
+			@RequestParam("category") String category,
+			@RequestParam("priority") String priority,
 			@RequestParam("resourceId") String resourceId,
+			@RequestParam("preferredContactName") String preferredContactName,
+			@RequestParam("preferredContactEmail") String preferredContactEmail,
+			@RequestParam(value = "files", required = false) List<MultipartFile> files,
 			@RequestParam(value = "file", required = false) MultipartFile file,
-			@RequestParam(value = "attachment", required = false) MultipartFile attachment) {
+			@RequestParam(value = "attachment", required = false) MultipartFile attachment,
+			@RequestParam(value = "attachments", required = false) List<MultipartFile> attachments) {
 		// Frontend link: StudentIncidentsPage -> incidentApi.createIncident() -> POST /api/incidents.
 		// Read logged-in user from JWT context; frontend token decides who is creating.
 		String email = authenticatedEmail();
-		// Support both parameter names for compatibility with different frontend payloads.
-		MultipartFile upload = file != null ? file : attachment;
-		IncidentResponseDto data = incidentService.createIncident(title, description, resourceId, upload, email);
+		// Support legacy and newer parameter names for compatibility with different frontend payloads.
+		List<MultipartFile> uploads = files;
+		if (uploads == null || uploads.isEmpty()) uploads = attachments;
+		if ((uploads == null || uploads.isEmpty()) && file != null) uploads = List.of(file);
+		if ((uploads == null || uploads.isEmpty()) && attachment != null) uploads = List.of(attachment);
+		IncidentResponseDto data = incidentService.createIncident(
+				title,
+				description,
+				category,
+				priority,
+				resourceId,
+				preferredContactName,
+				preferredContactEmail,
+				uploads == null ? List.of() : uploads,
+				email);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(new ApiResponse<>(true, "Incident created successfully", data));
 	}
@@ -113,6 +133,42 @@ public class IncidentController {
 		String email = authenticatedEmail();
 		IncidentResponseDto data = incidentService.declineAssignedIncident(id, email);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Incident assignment declined", data));
+	}
+
+	@GetMapping("/{id}/comments")
+	public ResponseEntity<ApiResponse<List<IncidentCommentResponseDto>>> getIncidentComments(@PathVariable("id") String id) {
+		String email = authenticatedEmail();
+		List<IncidentCommentResponseDto> data = incidentService.listComments(id, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident comments fetched successfully", data));
+	}
+
+	@PostMapping("/{id}/comments")
+	public ResponseEntity<ApiResponse<IncidentCommentResponseDto>> addIncidentComment(
+			@PathVariable("id") String id,
+			@RequestBody IncidentCommentRequest request) {
+		String email = authenticatedEmail();
+		IncidentCommentResponseDto data = incidentService.addComment(id, request, email);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse<>(true, "Incident comment added successfully", data));
+	}
+
+	@PutMapping("/{id}/comments/{commentId}")
+	public ResponseEntity<ApiResponse<IncidentCommentResponseDto>> updateIncidentComment(
+			@PathVariable("id") String id,
+			@PathVariable("commentId") String commentId,
+			@RequestBody IncidentCommentRequest request) {
+		String email = authenticatedEmail();
+		IncidentCommentResponseDto data = incidentService.updateComment(id, commentId, request, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident comment updated successfully", data));
+	}
+
+	@DeleteMapping("/{id}/comments/{commentId}")
+	public ResponseEntity<ApiResponse<Object>> deleteIncidentComment(
+			@PathVariable("id") String id,
+			@PathVariable("commentId") String commentId) {
+		String email = authenticatedEmail();
+		incidentService.deleteComment(id, commentId, email);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Incident comment deleted successfully", null));
 	}
 
 	private String authenticatedEmail() {

@@ -3,6 +3,7 @@ package com.example.backend.incident.dto;
 public class IncidentUpdateRequest {
 	private String status;
 	private String technicianRemarks;
+	private String rejectionReason;
 	private String assignedTo;
 
 	public String getStatus() {
@@ -27,5 +28,13 @@ public class IncidentUpdateRequest {
 
 	public void setAssignedTo(String assignedTo) {
 		this.assignedTo = assignedTo;
+	}
+
+	public String getRejectionReason() {
+		return rejectionReason;
+	}
+
+	public void setRejectionReason(String rejectionReason) {
+		this.rejectionReason = rejectionReason;
 	}
 }

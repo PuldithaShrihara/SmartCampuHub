@@ -4,12 +4,22 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.backend.incident.dto.IncidentCommentRequest;
+import com.example.backend.incident.dto.IncidentCommentResponseDto;
 import com.example.backend.incident.dto.IncidentResponseDto;
 import com.example.backend.incident.dto.IncidentStudentUpdateRequest;
 import com.example.backend.incident.dto.IncidentUpdateRequest;
 
 public interface IncidentService {
-	IncidentResponseDto createIncident(String title, String description, String resourceId, MultipartFile file,
+	IncidentResponseDto createIncident(
+			String title,
+			String description,
+			String category,
+			String priority,
+			String resourceId,
+			String preferredContactName,
+			String preferredContactEmail,
+			List<MultipartFile> attachments,
 			String authenticatedEmail);
 
 	List<IncidentResponseDto> getMyIncidents(String authenticatedEmail);
@@ -25,4 +35,13 @@ public interface IncidentService {
 	IncidentResponseDto acceptAssignedIncident(String incidentId, String authenticatedEmail);
 
 	IncidentResponseDto declineAssignedIncident(String incidentId, String authenticatedEmail);
+
+	List<IncidentCommentResponseDto> listComments(String incidentId, String authenticatedEmail);
+
+	IncidentCommentResponseDto addComment(String incidentId, IncidentCommentRequest request, String authenticatedEmail);
+
+	IncidentCommentResponseDto updateComment(String incidentId, String commentId, IncidentCommentRequest request,
+			String authenticatedEmail);
+
+	void deleteComment(String incidentId, String commentId, String authenticatedEmail);
 }

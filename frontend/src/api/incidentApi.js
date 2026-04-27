@@ -7,8 +7,12 @@ import { apiDeleteAuth, apiGetAuth, apiPostAuth, apiPostAuthMultipart, apiPutAut
  * Input (payload):
  * - title: Short incident title
  * - description: Full problem explanation
+ * - category: Incident category
+ * - priority: Priority level (Low/Medium/High/Critical)
  * - resourceId: Selected resource/equipment id
- * - file (optional): Image/PDF attachment
+ * - preferredContactName: Preferred contact person name
+ * - preferredContactEmail: Preferred contact email
+ * - files (optional): Up to 3 image attachments
  *
  * Output:
  * - Returns the API response Promise from backend.
@@ -22,7 +26,7 @@ import { apiDeleteAuth, apiGetAuth, apiPostAuth, apiPostAuthMultipart, apiPutAut
  * - We use FormData because normal JSON cannot upload files directly.
  * - FormData allows sending text fields + binary file in one request.
  *
- * @param {{ title: string, description: string, resourceId: string, file?: File | null }} payload
+ * @param {{ title: string, description: string, category: string, priority: string, resourceId: string, preferredContactName: string, preferredContactEmail: string, files?: File[] }} payload
  */
 export async function createIncident(payload) {
   // Create multipart form container for text + file.
@@ -30,10 +34,19 @@ export async function createIncident(payload) {
   // Add required text values from UI form.
   formData.append('title', payload.title)
   formData.append('description', payload.description)
+  formData.append('category', payload.category)
+  formData.append('priority', payload.priority)
   formData.append('resourceId', payload.resourceId)
-  // Attach file only if user selected one.
-  if (payload.file) {
-    formData.append('file', payload.file)
+  formData.append('preferredContactName', payload.preferredContactName)
+  formData.append('preferredContactEmail', payload.preferredContactEmail)
+  // Attach up to 3 images.
+  const files = Array.isArray(payload.files) ? payload.files.filter(Boolean).slice(0, 3) : []
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+  // Backward compatibility for callers still sending a single file.
+  if (files.length === 0 && payload.file) {
+    formData.append('files', payload.file)
   }
   // Send authenticated multipart POST request to create incident.
   return apiPostAuthMultipart('/api/incidents', formData)
@@ -62,7 +75,7 @@ export async function getMyIncidents() {
  *
  * Input:
  * - incidentId: Target incident id
- * - payload: Updated title/description/resourceId
+ * - payload: Updated title/description/category/priority/resourceId/contact details
  *
  * Output:
  * - Returns the API response Promise after update.
@@ -72,7 +85,7 @@ export async function getMyIncidents() {
  * - If status is already "In Progress" or "Resolved", update may be blocked.
  *
  * @param {string} incidentId
- * @param {{title: string, description: string, resourceId: string}} payload
+ * @param {{title: string, description: string, category: string, priority: string, resourceId: string, preferredContactName: string, preferredContactEmail: string}} payload
  */
 export async function updateMyIncident(incidentId, payload) {
   return apiPutAuth(`/api/incidents/my/${incidentId}`, payload)
@@ -179,4 +192,20 @@ export async function acceptIncidentAssignment(incidentId) {
  */
 export async function declineIncidentAssignment(incidentId) {
   return apiPostAuth(`/api/incidents/${incidentId}/decline`, {})
+}
+
+export async function getIncidentComments(incidentId) {
+  return apiGetAuth(`/api/incidents/${incidentId}/comments`)
+}
+
+export async function addIncidentComment(incidentId, message) {
+  return apiPostAuth(`/api/incidents/${incidentId}/comments`, { message })
+}
+
+export async function updateIncidentComment(incidentId, commentId, message) {
+  return apiPutAuth(`/api/incidents/${incidentId}/comments/${commentId}`, { message })
+}
+
+export async function deleteIncidentComment(incidentId, commentId) {
+  return apiDeleteAuth(`/api/incidents/${incidentId}/comments/${commentId}`)
 }
