@@ -6,6 +6,7 @@ import {
   updateIncident,
 } from '../../api/incidentApi.js'
 import { useAuth } from '../../context/useAuth.js'
+import IncidentsChart from '../../components/ticket/IncidentsChart.jsx'
 import '../../styles/TechnicianTicketsPage.css'
 
 function statusClassForBadge(status) {
@@ -327,6 +328,7 @@ export default function TechnicianTicketsPage() {
             <span className="tech-mini-pill resolved">Resolved {statusCounts.resolved}</span>
           </div>
         </div>
+        <IncidentsChart incidents={incidents} />
       </section>
 
       <section className="dash-card tech-tickets-table-card">
