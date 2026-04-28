@@ -94,6 +94,7 @@ export default function TechnicianDashboard() {
         <Header
           title="Technician Dashboard"
           userName={user?.fullName}
+          userRole="TECHNICIAN"
           unreadNotifications={unreadNotifications}
           onNotificationClick={() => navigate('/technician/notifications')}
           onLogout={handleLogout}
