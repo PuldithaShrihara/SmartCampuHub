@@ -3,6 +3,7 @@ import { FaFilePdf } from 'react-icons/fa'
 import { jsPDF } from 'jspdf'
 import { adminListTechnicians } from '../../api/auth.js'
 import { getAllIncidents, updateIncident } from '../../api/incidentApi.js'
+import AdminTicketAnalytics from '../../components/ticket/AdminTicketAnalytics.jsx'
 import '../../styles/TicketsPage.css'
 
 const STATUS_OPTIONS = ['Open', 'Resolved', 'Closed', 'Rejected']
@@ -485,7 +486,9 @@ export default function Tickets() {
         </div>
       </section>
 
-      <section className="dash-card tickets-table-card">
+      <AdminTicketAnalytics incidents={incidents} />
+
+      <section className="dash-card tickets-table-card" style={{ marginTop: '24px' }}>
       {error ? <div className="dash-msg error">{error}</div> : null}
 
       <div className="tickets-toolbar">
